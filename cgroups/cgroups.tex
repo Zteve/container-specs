@@ -1,17 +1,19 @@
 \documentclass[a4paper,twoside,12pt]{article}
 \usepackage{zed-cm}
 \usepackage{graphicx}
-\markboth{Draft}{Version 0.3}
+\markboth{Draft}{Version 0.1}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
 \parindent 10 pt
 
 \title{A Model of Linux Control Groups}
+
 \author{
 Glyn Normington\and
 Steve Powell
 }
+
 \maketitle
 % The following three commands ensure the title page is stamped as
 % confidential without a page number. Page numbering is started at the
@@ -21,23 +23,60 @@ Steve Powell
 \setcounter{page}{1}
 
 %=============================================================================
+
 This is a working document which serves to record the justifications, deliberations and results of an attempt to
 specify precisely some (or all) of the features of \emph{Linux Control Groups} which can support robust and reliable development of \emph{Warden} and related products.
 
-% Cntrl-Cmd-M -- \emph{}
-% Cntrl-Cmd-Z -- \zed{}
-% Cntrl-Cmd-X -- \axdef{}
-% Cntrl-Cmd-S -- \schema{}
-% Cntrl-Cmd-C -- \texttt{}
+% Alt-Cmd-M -- \emph{}
+% Alt-Cmd-Z -- \zed{}
+% Alt-Cmd-X -- \axdef{}
+% Alt-Cmd-S -- \schema{}
+% Alt-Shift-Cmd-T -- \texttt{}
 
 % Type checking hacks
 \newcommand{\true}{true}
 \newcommand{\false}{false}
 \renewcommand{\emptyset}{\varnothing}
-
 %=============================================================================
+
 \clearpage
 \tableofcontents
+
+\begin{thebibliography}{99}   % `99' is a picture of the generated numeric references -- they are two digits in this bibliography
+
+%%  Example bibliography entry:
+%\bibitem{knuth76} % citation callout, e.g.: \cite{knuth76}
+%  Donald E. Knuth, % author
+%  \emph{The computer as Master Mind}. % title
+%  J. Recreational Mathematics, Vol.~9(1), 1976-1977. % publisher, or journal, volume and date
+
+%% Correct these references, please Glyn:
+\bibitem{warden}
+  The Warden,
+  \emph{The warden docs?}, 
+  internal doc:00, (p. 730002), January 1, dot.
+
+\bibitem{garden}
+  The Gardener,
+  \emph{The plot sickens}, 
+  the greenhouse repository:II, (p. -42), February 29, 1900.
+
+\bibitem{linuxspecs}
+  Paul Menage, Paul Jackson and Christoph Lameter,
+  \emph{CGroups -- the Linux Kernel Archives}
+  $\langle$\texttt{www.kernel.org/doc/Documentation/cgroups/cgroups.txt?}$\rangle$, 2004-2006.
+
+\bibitem{linuxkernel}
+  \texttt{root},
+  \emph{file not found}, 
+  \texttt{/.spics}, (p. ~), Spring, MMXIV.
+
+\bibitem{rharticle}
+  Ronald Redhat, R.H.,
+  \emph{Underneath my hat}, 
+  The Hairpiece, Vol.~I, (p. 0), Never 0, 0.
+
+\end{thebibliography}
 
 \clearpage
 \pagenumbering{arabic}
@@ -45,14 +84,86 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
 %=============================================================================
 \section{Introduction}
 
-In order to implement some features and improvements to \emph{Warden} ...
+In order to implement some features and improvements to \emph{Warden} we intend to sharpen our understanding of Linux Control Groups and simultaneously document their use.
 
-\section{Specifications}
+In the process we intend to use our improved understanding to benefit:
+\begin{itemize}
+\item Linux Kernel documentation;
+\item Warden \cite{warden} and Garden \cite{garden} development and exploitation; and
+\item the wider development audience.
+\end{itemize}
+These are the deliverables we plan:
 
-\subsection{Control Groups}
+\begin{itemize}
+\item \emph{CGroupSpec}: a precise Z specification for Control Groups, and (at least) the Memory Subsystem, states;
+\item an improved introduction (for Z0L readers\footnote{\emph{Z0L} refers to people who do not speak Z; Z is their \emph{zero}th language.}) of Control Groups, etc.;
+\item \emph{WardenSpec}: a precise Z specification for a Warden API, using some or all of the \emph{CGroupSpec} state;
+\item an english version of the same (for Z0L readers);
+\item an implementation framework that maps \emph{WardenSpec} to \emph{CGroupSpec};
+\item proposals for future development of Warden functionality by reference to these specs.
+\end{itemize}
+As input to this work we access the following sources of information:
 
-\subsection{Subsystems}
+\begin{description}
+\item[Kernel specs] the english descriptions of Control Groups in the Kernel literature \cite{linuxspecs};
+\item[Kernel code] the Linux Kernel \cite{linuxkernel};
+\item[experiments] tests run against the CGroups kernel code (on a shared VM);
+\item[RedHat article] an article about CGroups written by RedHat which provides some invariants of the pseudo-filesystem state \cite{rharticle}.
+\end{description}
 
-\subsection{The Hierarchy}
+\subsection{The Linux specification \cite{linuxspecs}}
+
+In order to kick off the discussion (and to show what we're up against) I include the first section of \cite{linuxspecs} here:
+
+\begin{verbatim}
+1.1 What are cgroups ?
+----------------------
+
+Control Groups provide a mechanism for aggregating/partitioning sets of
+tasks, and all their future children, into hierarchical groups with
+specialized behaviour.
+
+Definitions:
+
+A *cgroup* associates a set of tasks with a set of parameters for one
+or more subsystems.
+
+A *subsystem* is a module that makes use of the task grouping
+facilities provided by cgroups to treat groups of tasks in
+particular ways. A subsystem is typically a "resource controller" that
+schedules a resource or applies per-cgroup limits, but it may be
+anything that wants to act on a group of processes, e.g. a
+virtualization subsystem.
+
+A *hierarchy* is a set of cgroups arranged in a tree, such that
+every task in the system is in exactly one of the cgroups in the
+hierarchy, and a set of subsystems; each subsystem has system-specific
+state attached to each cgroup in the hierarchy.  Each hierarchy has
+an instance of the cgroup virtual filesystem associated with it.
+
+At any one time there may be multiple active hierarchies of task
+cgroups. Each hierarchy is a partition of all tasks in the system.
+
+User-level code may create and destroy cgroups by name in an
+instance of the cgroup virtual file system, specify and query to
+which cgroup a task is assigned, and list the task PIDs assigned to
+a cgroup. Those creations and assignments only affect the hierarchy
+associated with that instance of the cgroup file system.
+
+On their own, the only use for cgroups is for simple job
+tracking. The intention is that other subsystems hook into the generic
+cgroup support to provide new attributes for cgroups, such as
+accounting/limiting the resources which processes in a cgroup can
+access. For example, cpusets (see Documentation/cgroups/cpusets.txt) allow
+you to associate a set of CPUs and a set of memory nodes with the
+tasks in each cgroup.
+\end{verbatim}
+
+
+\section{Control Groups}
+
+\section{Subsystems}
+
+\section{The Hierarchy}
 
 \end{document}
