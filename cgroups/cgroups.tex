@@ -1,0 +1,58 @@
+\documentclass[a4paper,twoside,12pt]{article}
+\usepackage{zed-cm}
+\usepackage{graphicx}
+\markboth{Draft}{Version 0.3}
+\pagestyle{myheadings}
+\begin{document}
+\parskip 2 pt
+\parindent 10 pt
+
+\title{A Model of Linux Control Groups}
+\author{
+Glyn Normington\and
+Steve Powell
+}
+\maketitle
+% The following three commands ensure the title page is stamped as
+% confidential without a page number. Page numbering is started at the
+% table of contents.
+\thispagestyle{myheadings}
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+%=============================================================================
+This is a working document which serves to record the justifications, deliberations and results of an attempt to
+specify precisely some (or all) of the features of \emph{Linux Control Groups} which can support robust and reliable development of \emph{Warden} and related products.
+
+% Cntrl-Cmd-M -- \emph{}
+% Cntrl-Cmd-Z -- \zed{}
+% Cntrl-Cmd-X -- \axdef{}
+% Cntrl-Cmd-S -- \schema{}
+% Cntrl-Cmd-C -- \texttt{}
+
+% Type checking hacks
+\newcommand{\true}{true}
+\newcommand{\false}{false}
+\renewcommand{\emptyset}{\varnothing}
+
+%=============================================================================
+\clearpage
+\tableofcontents
+
+\clearpage
+\pagenumbering{arabic}
+
+%=============================================================================
+\section{Introduction}
+
+In order to implement some features and improvements to \emph{Warden} ...
+
+\section{Specifications}
+
+\subsection{Control Groups}
+
+\subsection{Subsystems}
+
+\subsection{The Hierarchy}
+
+\end{document}
