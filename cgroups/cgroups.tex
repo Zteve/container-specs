@@ -7,6 +7,8 @@
 \parskip 2 pt
 \parindent 10 pt
 
+\def\Slash{\slash\hspace{0pt}}
+
 \title{A Model of Linux Control Groups}
 
 \author{
@@ -42,6 +44,7 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
 \clearpage
 \tableofcontents
 
+\begin{flushleft}
 \begin{thebibliography}{99}   % `99' is a picture of the generated numeric references -- they are two digits in this bibliography
 
 %%  Example bibliography entry:
@@ -50,10 +53,9 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
 %  \emph{The computer as Master Mind}. % title
 %  J. Recreational Mathematics, Vol.~9(1), 1976-1977. % publisher, or journal, volume and date
 
-%% Correct these references, please Glyn:
 \bibitem{warden}
   Various authors,
-  \emph{Warden github repository}, 
+  \emph{Warden github repository},
   \texttt{https://github.com/cloudfoundry/warden}.
 
 \bibitem{garden}
@@ -66,17 +68,23 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
   \emph{CGROUPS}
   \texttt{https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt}, 2004-2006.
 
+\bibitem{linuxkernel}
+  Linus Torvalds, \emph{et al},
+  \emph{Linux kernel source tree}
+  \texttt{https://github.com/torvalds/linux}.
+
 \bibitem{memory}
   Various authors,
   \emph{Memory Resource Controller}
   \texttt{https://www.kernel.org/doc/Documentation/cgroups/memory.txt}.
 
 \bibitem{rharticle}
-  Martin Prpi?, RŸdiger Landmann, and Douglas Silas,
+  Martin Prpi(?), RŸdiger Landmann, and Douglas Silas,
   \emph{Red Hat Enterprise Linux 6.5 GA: Resource Management Guide}, 
-  \texttt{https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/pdf/Resource_Management_Guide/Red_Hat_Enterprise_Linux-6-Resource_Management_Guide-en-US.pdf}.
+  \texttt{https://access.redhat.com/site/documentation/en-US\slash{}Red\_Hat\_Enterprise\_Linux/6/pdf/Resource\_Management\_Guide\slash{}Red\_Hat\_Enterprise\_Linux-6-Resource\_Management\_Guide-en-US.pdf}.
 
 \end{thebibliography}
+\end{flushleft}
 
 \clearpage
 \pagenumbering{arabic}
@@ -113,15 +121,15 @@ These are the deliverables we plan:
 As input to this work we access the following sources of information:
 
 \begin{description}
-\item[Kernel specs] the english descriptions of Control Groups in the Kernel literature \cite{linuxspecs};
+\item[Kernel specs] the english descriptions of Control Groups in the Kernel literature \cite{linuxgroups};
 \item[Kernel code] the Linux Kernel \cite{linuxkernel};
 \item[experiments] tests run against the CGroups kernel code (on a shared VM);
 \item[RedHat article] an article about CGroups written by RedHat which provides some invariants of the pseudo-filesystem state \cite{rharticle}.
 \end{description}
 
-\subsection{The Linux specification \cite{linuxspecs}}
+\subsection{The Linux specification \cite{linuxgroups}}
 
-In order to kick off the discussion (and to show what we're up against) I include the first section of \cite{linuxspecs} here:
+In order to kick off the discussion (and to show what we're up against) I include the first section of \cite{linuxgroups} here:
 
 \begin{verbatim}
 1.1 What are cgroups ?
@@ -167,10 +175,77 @@ you to associate a set of CPUs and a set of memory nodes with the
 tasks in each cgroup.
 \end{verbatim}
 
-
 \section{Control Groups}
 
+We begin by attempting to describe Control Groups.
+
+\subsection{Fundamentals}
+There are a number of fundamental sets of items we will not look into. There are $TASK$s, and there are $NAME$s. To begin with, only Control Groups have names, in our world.
+
+\begin{zed}
+[TASK, NAME]
+\end{zed}
+
+There is a special name for the first (initial) Control Group, which we need not know explicitly, but we define a constant to refer to it by:
+
+\begin{axdef}{}
+INITCGROUPNAME : NAME
+\end{axdef}
+
+Now, as far as a (single) Control Group is concerned it is just a (finite) collection of tasks, and we can document this:
+
+\begin{schema}{CGroup}
+taskset : \finset TASK
+\end{schema}
+and do not feel the need to constrain this further (at the moment).
+
+As a convenience, we can define the function $tasks$ which maps a $CGroup$ to its $taskset$:
+\begin{zed}
+tasks == (\lambda CGroup @ taskset)
+\end{zed}
+
+There are many $CGroup$s in the system, and the collection is where the names are associated with each group. Furthermore, the collection of $CGroup$s as a whole has a constraint on it: no task appears in more than one $CGroup$. We express this by talking about a collection of $CGroup$s. Because it is not the whole story, we shall name it $CGroupsBase$:
+
+\begin{schema}{CGroupsBase}
+cg : NAME \ffun CGroup
+\where
+\disjoint tasks \circ cg
+\end{schema}
+The $\disjoint$ line is the one expressing the constraint on tasks being assigned to at most one $CGroup$.
+
+We would like to say also that every task in the system is assigned to \emph{at least} one $CGroup$, but we do not yet know what ``every task in the system'' means. This comes later.
+
+\subsection{System Tasks}
+In order to describe the relationship between Control Groups and the tasks of the system as a whole, we will model the tasks of the system separately:
+
+\begin{schema}{Tasks}
+systasks : \finset TASK \\
+initialTask : TASK
+\where
+initialTask \in systasks
+\end{schema}
+where there is an $initialTask$, which is the first task of the system.
+
+When this set of tasks is created, this $initialTask$ must exist:
+
+\begin{schema}{InitTasks}
+Tasks'
+\where
+\# systasks' = 1
+\end{schema}
 \section{Subsystems}
+We may not need this refinement.
+
+\subsection{Groups and Tasks together}
+Now we can combine the Control Groups and system tasks and say how they should be related:
+
+\begin{schema}{CGroupTasks}
+Tasks \\
+CGroupsBase \\
+cgroup : TASK \ffun NAME
+\where
+tasks \circ cg \partition systasks
+\end{schema}
 
 \section{The Hierarchy}
 
