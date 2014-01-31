@@ -86,12 +86,20 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
 
 In order to implement some features and improvements to \emph{Warden} we intend to sharpen our understanding of Linux Control Groups and simultaneously document their use.
 
+Linux Control Groups are the basis for the current implementation of Warden as well as of Linux Containers (LXC), Docker, and Google's
+\textit{lmctfy} ("let me contain that for you") project and so are important to the industry as well as to the parochial interests of Cloud
+Foundry.
+
 In the process we intend to use our improved understanding to benefit:
 \begin{itemize}
 \item Linux Kernel documentation;
 \item Warden \cite{warden} and Garden \cite{garden} development and exploitation; and
 \item the wider development audience.
 \end{itemize}
+In particular, a clearer understanding of Warden/Garden and their basis in Linux Control Groups will put development of Warden/Garden
+on a much firmer footing and enable key abstractions to be introduced which will provide a much-needed, stable structure around which
+functional enhancements and the likely future evolution of Linux Control Groups can fit.
+
 These are the deliverables we plan:
 
 \begin{itemize}
