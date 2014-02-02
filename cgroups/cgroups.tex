@@ -95,7 +95,7 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
 In order to implement some features and improvements to \emph{Warden} we intend to sharpen our understanding of Linux Control Groups and simultaneously document their use.
 
 Linux Control Groups are the basis for the current implementation of Warden as well as of Linux Containers (LXC), Docker, and Google's
-\textit{lmctfy} ("let me contain that for you") project and so are important to the industry as well as to the parochial interests of Cloud
+\textit{lmctfy} (``\emph{l}et \emph{m}e \emph{c}ontain \emph{t}hat \emph{f}or \emph{y}ou'') project and so are important to the industry as well as to the parochial interests of Cloud
 Foundry.
 
 In the process we intend to use our improved understanding to benefit:
@@ -115,11 +115,10 @@ These are the deliverables we plan:
 \item an improved introduction (for Z0L readers\footnote{\emph{Z0L} refers to people who do not speak Z; Z is their \emph{zero}th language.}) of Control Groups, etc.;
 \item \emph{WardenSpec}: a precise Z specification for a Warden API, using some or all of the \emph{CGroupSpec} state;
 \item an english version of the same (for Z0L readers);
-\item an implementation framework that maps \emph{WardenSpec} to \emph{CGroupSpec};
+\item an implementation framework that maps \emph{WardenSpec} to \emph{CGroupSpec}; and
 \item proposals for future development of Warden functionality by reference to these specs.
 \end{itemize}
 As input to this work we access the following sources of information:
-
 \begin{description}
 \item[Kernel specs] the english descriptions of Control Groups in the Kernel literature \cite{linuxgroups};
 \item[Kernel code] the Linux Kernel \cite{linuxkernel};
@@ -174,6 +173,11 @@ access. For example, cpusets (see Documentation/cgroups/cpusets.txt) allow
 you to associate a set of CPUs and a set of memory nodes with the
 tasks in each cgroup.
 \end{verbatim}
+Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it is
+full of specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; and it is no worse --- and in many ways better --- than many such documents in the net.}. For example, it is ambiguous concerning the number and relationship between hierarchies; it
+doesn't explain what the initial state of a Control Group is; it talks about tasks and processes as though they were the same thing (they are!); the rules about the relationship between tasks and Control Groups sound contradictory; and so on.
+
+We very much hope to address these puzzles (and more) in the following sections.
 
 \section{Control Groups}
 
