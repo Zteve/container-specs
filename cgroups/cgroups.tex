@@ -190,7 +190,7 @@ There are a number of fundamental sets of items we will not look into. There are
 [TASK, NAME]
 \end{zed}
 
-There is a special name for the first (initial) Control Group, which we need not know explicitly, but we define a constant to refer to it by:
+There is a special name for the first (initial) Control Group, which we need not know explicitly, but we define a constant for it:
 
 \begin{axdef}{}
 INITCGROUPNAME : NAME
@@ -241,15 +241,51 @@ Tasks'
 We may not need this refinement.
 
 \subsection{Groups and Tasks together}
-Now we can combine the Control Groups and system tasks and say how they should be related:
+Now we can combine the Control Groups and system tasks and say how they should be related. At the same time we can describe a function $cgroup$ which relates each task to the name of its (unique) Control Group.
 
-\begin{schema}{CGroupTasks}
+\begin{schema}{CGroupsTasks}
 Tasks \\
-CGroupsBase \\
+CGroupsBase
+\also
 cgroup : TASK \ffun NAME
 \where
 tasks \circ cg \partition systasks
+\also
+\dom cgroup = systasks \\
+\forall t : systasks @ t \in tasks ( cg (cgroup ~ t))
 \end{schema}
+where: each task of the system is in precisely one Control Group, or, as expressed here, the Control Group tasks \emph{partition} the system tasks; and there is a function ($cgroup$) which maps each system task to the name of the Control Group in which it resides.
+
+It is important to note that the existence of the function $cgroup$ is guaranteed by the partition requirement that accompanies it. It is what is called `derived state', and these assertions impose no extra constraints. In fact, the existence of $cgroup$ is \emph{equivalent} to the partition constraint.
+
+It is legitimate to ask how the collection of Control Groups and Tasks is initialised.
+
+\begin{schema}{InitCGroupsTasks}
+CGroupsTasks' \\
+\Xi Tasks
+\where
+\exists CGroup' @ \\
+( ~~~ cg' = \{ ~ INITCGROUPNAME \mapsto \theta CGroup' ~\} \\
+\land taskset' = systasks' ~~)
+\end{schema}
+We here decide that all existing system tasks are placed in the initial $CGroup$, with a standard initial name. Good job we declared it beforehand!
+
+Although we have decided this, we do not yet know if this is true. However, an assertion like this has the enormous advantage that it can be verified and tested, as can all of the state descriptions. If necessary we can come back and change it.
+
+\subsection{Operations}
+
+After initialisation it is natural to consider operations that might `happen' to Control Groups. We will try to understand how tasks are moved between Control Groups, how a new task is inserted (into the system, and therefore into the groups), how a new Control Group is created, and how tasks and Control Groups are deleted. Describing each of these operations challenges our state descriptions and constraints---which is a good thing.
+
+% \begin{schema}{NewCGroup}
+% \end{schema}
+% \begin{schema}{DeleteCGroup}
+% \end{schema}
+% \begin{schema}{NewCGroupTask}
+% \end{schema}
+% \begin{schema}{DeleteCGroupTask}
+% \end{schema}
+% \begin{schema}{MoveCGroupTask}
+% \end{schema}
 
 \section{The Hierarchy}
 
