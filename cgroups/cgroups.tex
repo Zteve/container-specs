@@ -29,6 +29,16 @@ Steve Powell
 This is a working document which serves to record the justifications, deliberations and results of an attempt to
 specify precisely some (or all) of the features of \emph{Linux Control Groups} which can support robust and reliable development of \emph{Warden} and related products.
 
+\paragraph{Current ``to-do'' list:}
+\begin{itemize}
+\item \emph{ops}--- describe more operations (e.g. on $CGroupsTasks$);
+\item \emph{hierarchy}--- describe trees of $CGroup$s;
+\item \emph{subsystem}--- describe subsystems and attachment to $CGroup$s;
+\item \emph{RedHat rule 2}--- make rule 2 into a constraint on subsystems+hierarchies;
+\item \emph{RedHat rules}--- ensure all RedHat rules are represented correctly.
+\end{itemize}
+
+
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
 % Alt-Cmd-X -- \axdef{}
@@ -284,8 +294,30 @@ After initialisation it is natural to consider operations that might `happen' to
 % \end{schema}
 % \begin{schema}{DeleteCGroupTask}
 % \end{schema}
-% \begin{schema}{MoveCGroupTask}
-% \end{schema}
+
+\subsubsection{Move a task from one $CGroup$ to another}
+
+Within a collection of $CGroup$s (in a $CGroupsTasks$ state) we want to explain what happens if we move a task from one Control Group to another.
+
+The system tasks are not changed by this, and we need to preserve the partitioning nature of the collection of Control Groups. We need to supply the task which we are moving ($t?$), and the (name of the) Control Group we are moving it to ($dest?$). (We do not need to supply the name of the Control Group it `comes from', because the state has that information.)
+
+\begin{schema}{MoveCGroupTask}
+t? : TASK \\
+dest? : NAME
+\also
+\Delta CGroupsTasks \\
+\Xi Tasks 
+\where
+t? \in systasks \\
+dest? \in \dom cg
+\also
+cgroup' = cgroup \oplus \{ ~t? \mapsto dest? ~\}
+\end{schema}
+Amazingly, this is all we need to say.  The constraints on the inputs are that the task is a real one in the system and that the name is the name of a known Control Group (of this collection).
+
+The new $cgroup$ map is the same as the old one, except that the input task, $t?$, is now mapped to the Control Group named $dest?$.
+
+The map $cgroup$, which we noted above was part of the derived state, uniquely determines the partition (and \emph{vice versa}), so simply saying what the map becomes is sufficient to determine the rest of the new state, and the partition constraint remains true.
 
 \section{The Hierarchy}
 
