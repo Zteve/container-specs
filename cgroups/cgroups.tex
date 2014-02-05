@@ -271,6 +271,13 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 1003520
 # cat ../../mem2/inst1/memory.limit_in_bytes 
 1003520
+# echo $$ > tasks
+# cat tasks
+1365
+1409
+# cat ../../mem2/inst1/tasks
+1365
+1411
 \end{verbatim}
 
 Attaching a new subsystem to one of the hierarchies attached to an existing subsystem (this follows on from the previous experiment):
