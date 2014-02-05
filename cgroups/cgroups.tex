@@ -73,20 +73,32 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
   \emph{Garden github repository}, 
   \texttt{https://github.com/pivotal-cf-experimental/garden}.
 
+% API abstracting the cgroup filesystem
+% See http://manpages.ubuntu.com/manpages/lucid/man5/cgconfig.conf.5.html for configuration containing useful insights
+\bibitem{libcgroup}
+  Various authors
+  \emph{libcgroup},
+  \texttt{http://libcg.sourceforge.net/html/index.html}.
+
 \bibitem{linuxgroups}
   Paul Menage, Paul Jackson and Christoph Lameter,
-  \emph{CGROUPS}
+  \emph{CGROUPS},
   \texttt{https://www.kernel.org/doc/Documentation/cgroups/cgroups.txt}, 2004-2006.
 
 \bibitem{linuxkernel}
   Linus Torvalds, \emph{et al},
-  \emph{Linux kernel source tree}
+  \emph{Linux kernel source tree},
   \texttt{https://github.com/torvalds/linux}.
 
 \bibitem{memory}
   Various authors,
-  \emph{Memory Resource Controller}
+  \emph{Memory Resource Controller},
   \texttt{https://www.kernel.org/doc/Documentation/cgroups/memory.txt}.
+
+\bibitem{noop}
+  Kamezawa Hiroyuki, \emph{et al},
+  \emph{NOOP cgroup subsystem},
+  \texttt{http://thread.gmane.org/gmane.linux.kernel/777763}.
 
 \bibitem{rharticle}
   Martin Prpi\u{c}, R\"udiger Landmann, and Douglas Silas,
@@ -189,6 +201,81 @@ doesn't explain what the initial state of a Control Group is; it talks about tas
 
 We very much hope to address these puzzles (and more) in the following sections.
 
+\section{Notes}
+\subsection{Mailing Lists}
+It does not seem possible to define a cgroup hierarchy with no subsystems attached to it.
+See the discussion \cite{noop}.
+
+\subsection{Experiments}
+Attaching multiple subsystems to a single hierarchy:
+\begin{verbatim}
+# cd /tmp/warden/cgroup
+# mkdir test
+# mount -t cgroup -o 'cpuset,blkio' none /tmp/warden/cgroup/test
+# cd test
+# mkdir parent
+# cd parent
+# echo 0 > cpuset.mems 
+# echo 0 > cpuset.cpus
+# echo $$ > tasks
+# cat tasks
+1840
+2014
+# cat /proc/1840/cgroup
+13:blkio,cpuset:/parent
+4:memory:/parent/child
+3:devices:/
+2:cpuacct:/
+1:cpu:/
+# cat /proc/cgroups
+#subsys_name	hierarchy	num_cgroups	enabled
+cpuset	13	2	1
+cpu	1	1	1
+cpuacct	2	1	1
+memory	4	3	1
+devices	3	1	1
+freezer	0	1	1
+blkio	13	2	1
+perf_event	0	1	1
+# cat /proc/mounts 
+...
+none /tmp/warden/cgroup tmpfs rw,relatime 0 0
+none /tmp/warden/cgroup/cpu cgroup rw,relatime,cpu 0 0
+none /tmp/warden/cgroup/cpuacct cgroup rw,relatime,cpuacct 0 0
+none /tmp/warden/cgroup/devices cgroup rw,relatime,devices 0 0
+none /tmp/warden/cgroup/memory cgroup rw,relatime,memory 0 0
+none /tmp/warden/cgroup/test cgroup rw,relatime,blkio,cpuset 0 0
+\end{verbatim}
+Attaching a single subsystem to multiple hierarchies:
+\begin{verbatim}
+$ pwd   
+/home/vagrant
+$ mkdir mem1
+$ mkdir mem2
+$ sudo su
+# mount -t cgroup -o memory none /home/vagrant/mem1
+# mount -t cgroup -o memory none /home/vagrant/mem2
+# cd mem1
+# mkdir inst1  
+# ls inst1 
+cgroup.clone_children  memory.failcnt ...
+# ls ../mem2
+cgroup.clone_children  inst1 memory.limit_in_bytes ...
+# cd inst1
+# echo 1000000 > memory.limit_in_bytes 
+# cat memory.limit_in_bytes 
+1003520
+# cat ../../mem2/inst1/memory.limit_in_bytes 
+1003520
+\end{verbatim}
+Attaching a new subsystem to one of the hierarchies attached to an existing subsystem (this follows on from the previous experiment):
+\begin{verbatim}
+# mount -t cgroup -o cpuset none /home/vagrant/mem1
+# ls /home/vagrant/mem1
+cpuset.cpus ... // No memory.* files!
+# ls /home/vagrant/mem2
+cgroup.clone_children  inst1 memory.limit_in_bytes ...
+\end{verbatim}
 \section{Control Groups}
 
 We begin by attempting to describe Control Groups.
