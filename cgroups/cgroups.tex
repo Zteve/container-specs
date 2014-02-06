@@ -62,8 +62,8 @@ specify precisely some (or all) of the features of \emph{Linux Control Groups} w
 
 In order to implement some features and improvements to \emph{Warden} we intend to sharpen our understanding of Linux Control Groups and simultaneously document their use.
 
-Linux Control Groups are the basis for the current implementation of Warden as well as of Linux Containers (LXC), Docker, and Google's
-\textit{lmctfy} (``\emph{l}et \emph{m}e \emph{c}ontain \emph{t}hat \emph{f}or \emph{y}ou'') project and so are important to the industry as well as to the parochial interests of Cloud
+Linux Control Groups are part of the basis for the current implementation of Warden as well as of Linux Containers (LXC), Docker, and Google's
+\textit{lmctfy} (``let me contain that for you'') project and so are important to the industry as well as to Cloud
 Foundry.
 
 In the process we intend to use our improved understanding to benefit:
@@ -72,9 +72,9 @@ In the process we intend to use our improved understanding to benefit:
 \item Warden \cite{warden} and Garden \cite{garden} development and exploitation; and
 \item the wider development audience.
 \end{itemize}
-In particular, a clearer understanding of Warden/Garden and their basis in Linux Control Groups will put development of Warden/Garden
-on a much firmer footing and enable key abstractions to be introduced which will provide a much-needed, stable structure around which
-functional enhancements and the likely future evolution of Linux Control Groups can fit.
+In particular, a clearer understanding of Warden/Garden and their basis in Linux Control Groups will put their development 
+on a much firmer footing and enable key abstractions to be introduced which will provide a much-needed, stable structure upon which
+functional enhancements and the likely future evolution of Linux Control Groups can rest.
 
 These are the deliverables we plan:
 
@@ -263,20 +263,36 @@ There are fundamental sets of items we will not look into, for example $TASK$s.
 [TASK]
 \end{zed}
 
-Control Groups will have names, but these turn out to have a structure --- a file directory structure --- so we should define them as sequences of ``directory'' names. The latter we will not define.
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{A single control group}
+
+A single Control Group in isolation is just a (finite) collection of tasks, and we can document this:
+
+\begin{schema}{CGroup}
+taskset : \finset TASK
+\end{schema}
+We do not feel the need to elaborate on this (at the moment).
+
+As a convenience, we define the (global) function $tasks$ which maps a $CGroup$ to its $taskset$:
+\begin{zed}
+tasks == (\lambda CGroup @ taskset)
+\end{zed}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{Control group names}
+
+Control Groups have names, but these have a structure---a file directory-like structure---so we define them as \emph{sequences} of simple names (think of these as directory names). The latter we will not define further:
 
 \begin{zed}
-[NAME]
+[SIMPLENAME]
 \end{zed}
-and now Control Group names are sequences of these:
+and Control Group names are sequences of these, for which we use the shorthand $CGPath$:
 
 \begin{zed}
-CGPath == \seq NAME
+CGPath == \seq SIMPLENAME
 \end{zed}
 
-To begin with, only Control Groups have names, in our world.
-
-There is a special name for the first (initial) Control Group, the root. We define a constant for it:
+There is a special name for the first (initial) Control Group, the root of the structure. We define a constant for it:
 
 \begin{axdef}{}
 ROOTCGROUPNAME : CGPath
@@ -284,38 +300,23 @@ ROOTCGROUPNAME : CGPath
 ROOTCGROUPNAME = \langle \rangle
 \end{axdef}
 
-Now, as far as a (single) Control Group is concerned it is just a (finite) collection of tasks, and we can document this:
+There may be many $CGroup$s in the system, and a collection of $CGroup$ with names must `fill out' the tree-structure with $CGPath$ names. We explain this with a $NamedCGroups$ collection:
 
-\begin{schema}{CGroup}
-taskset : \finset TASK
-\end{schema}
-and do not feel the need to constrain this further (at the moment).
-
-As a convenience, we can define the function $tasks$ which maps a $CGroup$ to its $taskset$:
-\begin{zed}
-tasks == (\lambda CGroup @ taskset)
-\end{zed}
-
-There are many $CGroup$s in the system, and the collection is where the names are associated with each group. Furthermore, the collection of $CGroup$s as a whole has a constraint on it: no task appears in more than one $CGroup$. We express this by talking about a collection of $CGroup$s. Because it is not the whole story, we shall name it $CGroupsBase$. The collections must form a hierarchy.
-
-\begin{schema}{CGroupsBase}
+\begin{schema}{NamedCGroups}
 cg : CGPath \ffun CGroup
 \where
 ROOTCGROUPNAME \in \dom cg \\
 \forall s : \dom cg @ \forall t : CGPath | t \subset s @ t \in \dom cg
-\also
-\disjoint tasks \circ cg
 \end{schema}
+The constraints imply that there is  at least one $CGroup$ in the collection (the root) and that the names are `prefix-closed'. The latter constraint is equivalent to saying the names fit together in a tree-structure (as in a file-system). 
+There is a $CGroup$ for every node in the tree, `named' by the sequence of simple names from the root to the node.
 
-There is at minimum a root Control Group in the collection.  The collection is named in a hierarchy (the constraint describes this as `prefix-closed') which is just like a file-system structure.
-
-The $\disjoint$ line is the one expressing the constraint on tasks being assigned to at most one $CGroup$ in the collection.
-
-We would like to say also that every task in the system is assigned to \emph{at least} one $CGroup$, but we do not yet know what ``every task in the system'' means. This comes next.
+We have said nothing about the \emph{tasks} in the $CGroup$s in the named collection.
+This comes next.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{System Tasks}
-In order to describe the relationship between Control Groups and the tasks of the system as a whole, we will model the tasks of the system separately:
+In order to describe the relationship between named control groups and tasks, we will first model the tasks of the system separately:
 
 \begin{schema}{Tasks}
 systasks : \finset TASK \\
@@ -332,16 +333,17 @@ Tasks'
 \where
 \# systasks' = 1
 \end{schema}
-\section{Subsystems}
-We may not need this refinement.
+We may not need this property.
 
 %----------------------------------------------------------------------------------------------------
-\subsection{Groups and Tasks together}
-Now we can combine the Control Groups and system tasks and say how they should be related. At the same time we can describe a function $cgroup$ which relates each task to the name of its (unique) Control Group.
+\subsection{Control Group Hierarchy}
+Now we can combine the named control groups and system tasks and say how they should be related. At the same time we can describe a function $cgroup$ which maps each task to a control group in the collection.
 
-\begin{schema}{CGroupsTasks}
+We are defining a \emph{hierarchy} of control groups.
+
+\begin{schema}{CGHierarchy}
 Tasks \\
-CGroupsBase
+NamedCGroups
 \also
 cgroup : TASK \ffun CGPath
 \where
@@ -350,28 +352,36 @@ tasks \circ cg \partition systasks
 \dom cgroup = systasks \\
 \forall t : systasks @ t \in tasks ( cg (cgroup ~ t))
 \end{schema}
-where: each task of the system is in precisely one Control Group, or, as expressed here, the Control Group tasks \emph{partition} the system tasks; and there is a function ($cgroup$) which maps each system task to the name of the Control Group in which it resides.
+Each task of the system is in precisely one control group, or, as expressed here, the control group tasks \emph{partition} the system tasks; \emph{and} there is a function ($cgroup$) which maps each system task to the (full) name ($CGPath$) of the control group in which it resides.
 
 It is important to note that the existence of the function $cgroup$ is guaranteed by the partition requirement that accompanies it. It is what is called `derived state', and these assertions impose no extra constraints. In fact, the existence of $cgroup$ is \emph{equivalent} to the partition constraint.
 
-It is legitimate to ask how the collection of Control Groups and Tasks is initialised.
+It is legitimate to ask how a $CGHierarchy$ is initialised. We do so next.
 
-\begin{schema}{InitCGroupsTasks}
-CGroupsTasks' \\
+
+%----------------------------------------------------------------------------------------------------
+\subsection{Hierarchy operations}
+
+We consider initialisation to be a sort of degenerate operation.
+
+After initialisation it is natural to consider other state changes that might `happen' to hierarchies. We will try to understand how tasks are moved between control groups in a hierarchy, how a new task is inserted (into the system, and therefore into the groups), how a new control group is created, and how tasks and control groups are deleted. Describing each of these operations precisely challenges our state descriptions and constraints---which is a good thing.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{initialisation}
+
+\begin{schema}{InitCGHierarchy}
+CGHierarchy' \\
 \Xi Tasks
 \where
 \exists CGroup' @ \\
 ( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
 \land taskset' = systasks' ~~)
 \end{schema}
-We here decide that all existing system tasks are placed in the initial $CGroup$, with a standard initial name. Good job we declared it beforehand!
-
-Although we have decided this, we do not yet know if this is true. However, an assertion like this has the enormous advantage that it can be verified and tested, as can all of the state descriptions. If necessary we can come back and change it.
-
-%----------------------------------------------------------------------------------------------------
-\subsection{Operations}
-
-After initialisation it is natural to consider operations that might `happen' to Control Groups. We will try to understand how tasks are moved between Control Groups, how a new task is inserted (into the system, and therefore into the groups), how a new Control Group is created, and how tasks and Control Groups are deleted. Describing each of these operations precisely challenges our state descriptions and constraints---which is a good thing.
+We here \emph{decide} that all existing system tasks are placed in the initial $CGroup$, 
+with the standard root name\footnote{Although we have decided this, 
+we do not yet know if this is true. However, an assertion like this has the enormous advantage that it can be verified 
+and tested, as can all of the state descriptions. If necessary we can come back and change it.}. 
+Good job we declared it beforehand!
 
 % \begin{schema}{NewCGroup}
 % \end{schema}
@@ -385,15 +395,15 @@ After initialisation it is natural to consider operations that might `happen' to
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Move a task from one $CGroup$ to another}
 
-Within a collection of $CGroup$s (in a $CGroupsTasks$ state) we want to explain what happens if we move a task from one Control Group to another.
+Within a hierarchy we want to explain what happens if we move a task from one control group to another.
 
-The system tasks are not changed by this, and we need to preserve the partitioning nature of the collection of Control Groups. We need to supply the task which we are moving ($t?$), and the (name of the) Control Group we are moving it to ($dest?$). We do not need to supply the name of the Control Group it `moves from', because the state has that information already.
+The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy. We need to supply the task which we are moving ($t?$), and the (full name of the) control group we are moving it to ($dest?$). We do not need to supply the control group it `moves from', because the hierarchy state has that information already.
 
 \begin{schema}{MoveCGroupTask}
 t? : TASK \\
 dest? : CGPath
 \also
-\Delta CGroupsTasks \\
+\Delta CGHierarchy \\
 \Xi Tasks 
 \where
 t? \in systasks \\
@@ -401,16 +411,20 @@ dest? \in \dom cg
 \also
 cgroup' = cgroup \oplus \{ ~t? \mapsto dest? ~\}
 \end{schema}
-The constraints on the inputs are that the task is an existing one in the system and that the name is the name of a known Control Group (of this hierarchy). The new $cgroup$ map is the same as the old one, except that the input task, $t?$, is now mapped to the Control Group named $dest?$.
+The constraints on the inputs are that the task exists already and that the name is the name of a known control group (of this hierarchy). The new map $cgroup'$ is the same as the old one, except that the input task, $t?$, is now mapped to the control group named $dest?$.
 
 Amazingly, this is all we need to say.  
 
-The map $cgroup$, which we noted above was \emph{derived}, uniquely determines the partition and \emph{vice versa}, so simply saying what the new map should be suffices to determine the rest of the new state, with the partition constraint holding.
+The map $cgroup'$, which we noted above was \emph{derived state}, uniquely determines the partition 
+and \emph{vice versa}, so simply saying what the new map should be suffices to determine the rest of the new state, with the partition constraint holding.
 
 %=============================================================================
 \section{Subsystems}
 
 \clearpage
+
+\appendix
+
 \begin{flushleft}
 \begin{thebibliography}{99}   % `99' is a picture of the generated numeric references -- they are two digits in this bibliography
 
