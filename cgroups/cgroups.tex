@@ -97,14 +97,14 @@ As input to this work we access the following sources of information:
 %----------------------------------------------------------------------------------------------------
 \subsection{The Linux specification \cite{linuxgroups}}
 
-In order to kick off the discussion (and to show what we're up against) I include the first section of \cite{linuxgroups} here:
+In order to kick off the discussion (and to show what we're up against) we include the first section of \cite{linuxgroups} here:
 
-\begin{verbatim}
+{\small \begin{verbatim}
 1.1 What are cgroups ?
 ----------------------
 
-Control Groups provide a mechanism for aggregating/partitioning sets of
-tasks, and all their future children, into hierarchical groups with
+Control Groups provide a mechanism for aggregating/partitioning sets
+of tasks, and all their future children, into hierarchical groups with
 specialized behaviour.
 
 Definitions:
@@ -135,33 +135,39 @@ a cgroup. Those creations and assignments only affect the hierarchy
 associated with that instance of the cgroup file system.
 
 On their own, the only use for cgroups is for simple job
-tracking. The intention is that other subsystems hook into the generic
-cgroup support to provide new attributes for cgroups, such as
-accounting/limiting the resources which processes in a cgroup can
-access. For example, cpusets (see Documentation/cgroups/cpusets.txt) allow
-you to associate a set of CPUs and a set of memory nodes with the
-tasks in each cgroup.
-\end{verbatim}
+tracking. The intention is that other subsystems hook into the
+generic cgroup support to provide new attributes for cgroups, such
+as accounting/limiting the resources which processes in a cgroup can
+access. For example, cpusets (see Documentation/cgroups/cpusets.txt)
+allow you to associate a set of CPUs and a set of memory nodes with
+the tasks in each cgroup.
+\end{verbatim}}
 Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it is
-full of specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; and it is no worse --- and in many ways better --- than many such documents in the net.}. For example, it is ambiguous concerning the number and relationship between hierarchies; it
-doesn't explain what the initial state of a Control Group is; it talks about tasks and processes as though they were the same thing (they are!); the rules about the relationship between tasks and Control Groups sound contradictory; and so on.
+full of specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; and it is no worse---and in many ways better---than many such.}. For example, it is ambiguous concerning the number of and relationship between hierarchies; it
+doesn't explain what the initial state of a Control Group is; it talks about tasks and processes as though they were the same without comment (we think they are the same, but we're not sure); the rules about the relationship between tasks and Control Groups sound contradictory; and so on.
 
 We very much hope to address these puzzles (and more) in the following sections.
 
 %=============================================================================
 \section{Notes}
 
-%----------------------------------------------------------------------------------------------------
-\subsection{Mailing Lists}
+We gather here some observations, experiments and discussions which have informed our bit of research. This section may not survive the life of this specification, but we find it useful to try and document what we learn \emph{as we learn it}.
 
-It does not seem possible to define a cgroup hierarchy with no subsystems attached to it.
+%----------------------------------------------------------------------------------------------------
+\subsection{Mailing Lists Discussions}
+
+It does not seem possible to define a \texttt{cgroup} hierarchy with no subsystems attached to it.
 See the discussion \cite{noop}.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Experiments}
+We performed some simple experiments on a (virtual, and hence infinitely refreshable) Linux machine.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{multiple subsystems}
 
 Attaching multiple subsystems to a single hierarchy:
-\begin{verbatim}
+{\small \begin{verbatim}
 # cd /tmp/warden/cgroup
 # mkdir test
 # mount -t cgroup -o 'cpuset,blkio' none /tmp/warden/cgroup/test
@@ -198,10 +204,13 @@ none /tmp/warden/cgroup/cpuacct cgroup rw,relatime,cpuacct 0 0
 none /tmp/warden/cgroup/devices cgroup rw,relatime,devices 0 0
 none /tmp/warden/cgroup/memory cgroup rw,relatime,memory 0 0
 none /tmp/warden/cgroup/test cgroup rw,relatime,blkio,cpuset 0 0
-\end{verbatim}
+\end{verbatim}}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{multiple hierarchies}
 
 Attaching a single subsystem to multiple hierarchies:
-\begin{verbatim}
+{\small \begin{verbatim}
 $ pwd   
 /home/vagrant
 $ mkdir mem1
@@ -228,16 +237,19 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 # cat ../../mem2/inst1/tasks
 1365
 1411
-\end{verbatim}
+\end{verbatim}}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{overlapping hierarchies}
 
 Attaching a new subsystem to one of the hierarchies attached to an existing subsystem (this follows on from the previous experiment):
-\begin{verbatim}
+{\small \begin{verbatim}
 # mount -t cgroup -o cpuset none /home/vagrant/mem1
 # ls /home/vagrant/mem1
 cpuset.cpus ... // No memory.* files!
 # ls /home/vagrant/mem2
 cgroup.clone_children  inst1 memory.limit_in_bytes ...
-\end{verbatim}
+\end{verbatim}}
 
 %=============================================================================
 \section{Control Groups}
@@ -359,7 +371,7 @@ Although we have decided this, we do not yet know if this is true. However, an a
 %----------------------------------------------------------------------------------------------------
 \subsection{Operations}
 
-After initialisation it is natural to consider operations that might `happen' to Control Groups. We will try to understand how tasks are moved between Control Groups, how a new task is inserted (into the system, and therefore into the groups), how a new Control Group is created, and how tasks and Control Groups are deleted. Describing each of these operations challenges our state descriptions and constraints---which is a good thing.
+After initialisation it is natural to consider operations that might `happen' to Control Groups. We will try to understand how tasks are moved between Control Groups, how a new task is inserted (into the system, and therefore into the groups), how a new Control Group is created, and how tasks and Control Groups are deleted. Describing each of these operations precisely challenges our state descriptions and constraints---which is a good thing.
 
 % \begin{schema}{NewCGroup}
 % \end{schema}
@@ -371,11 +383,11 @@ After initialisation it is natural to consider operations that might `happen' to
 % \end{schema}
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Move a task from one $CGroup$ to another}
+\subsubsection*{Move a task from one $CGroup$ to another}
 
 Within a collection of $CGroup$s (in a $CGroupsTasks$ state) we want to explain what happens if we move a task from one Control Group to another.
 
-The system tasks are not changed by this, and we need to preserve the partitioning nature of the collection of Control Groups. We need to supply the task which we are moving ($t?$), and the (name of the) Control Group we are moving it to ($dest?$). (We do not need to supply the name of the Control Group it `comes from', because the state has that information.)
+The system tasks are not changed by this, and we need to preserve the partitioning nature of the collection of Control Groups. We need to supply the task which we are moving ($t?$), and the (name of the) Control Group we are moving it to ($dest?$). We do not need to supply the name of the Control Group it `moves from', because the state has that information already.
 
 \begin{schema}{MoveCGroupTask}
 t? : TASK \\
@@ -389,11 +401,11 @@ dest? \in \dom cg
 \also
 cgroup' = cgroup \oplus \{ ~t? \mapsto dest? ~\}
 \end{schema}
-Amazingly, this is all we need to say.  The constraints on the inputs are that the task is a real one in the system and that the name is the name of a known Control Group (of this collection).
+The constraints on the inputs are that the task is an existing one in the system and that the name is the name of a known Control Group (of this hierarchy). The new $cgroup$ map is the same as the old one, except that the input task, $t?$, is now mapped to the Control Group named $dest?$.
 
-The new $cgroup$ map is the same as the old one, except that the input task, $t?$, is now mapped to the Control Group named $dest?$.
+Amazingly, this is all we need to say.  
 
-The map $cgroup$, which we noted above was part of the derived state, uniquely determines the partition (and \emph{vice versa}), so simply saying what the map becomes is sufficient to determine the rest of the new state, and the partition constraint remains true.
+The map $cgroup$, which we noted above was \emph{derived}, uniquely determines the partition and \emph{vice versa}, so simply saying what the new map should be suffices to determine the rest of the new state, with the partition constraint holding.
 
 %=============================================================================
 \section{Subsystems}
