@@ -32,7 +32,7 @@ specify precisely some (or all) of the features of \emph{Linux control groups} w
 
 \paragraph{Current ``to-do'' list:}
 \begin{itemize}
-\item \emph{ops}--- describe more operations (e.g. on $CGroupsTasks$);
+\item \emph{ops}--- describe more operations (e.g. on $CGroupsTasks$); (\textsc{Done})
 \item \emph{hierarchy}--- describe trees of $CGroup$s; (\textsc{Done})
 \item \emph{subsystem}--- describe subsystems and attachment to $CGroup$s;
 \item \emph{RedHat rule 2}--- make rule 2 into a constraint on subsystems+hierarchies;
@@ -352,17 +352,17 @@ We may not need to use this property directly.
 We do need to speak about new task creation, and so here is how we model it in the system:
 
 \begin{schema}{CreateTask}
-task? : TASK \\
-parent? : TASK
+parent? : TASK \\
+task! : TASK
 \also
 \Delta Tasks
 \where
-task? \notin systasks \\
 parent? \in systasks \\
-systasks' = systasks \cup \{ task? \}
+task! \notin systasks \\
+systasks' = systasks \cup \{ task! \}
 \end{schema}
-The new task is not already in the system; it has to have a (designated) parent, which is just any existing system task;
-the new task is inserted into the system, without disturbing any other tasks.
+The new task has to have a (designated) parent, which is just any existing system task; the new task is not already
+in the system and is inserted into the system, without disturbing any other tasks.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Destroying a task}
@@ -411,12 +411,18 @@ It is legitimate to ask how a $CGHierarchy$ is initialised. We do so next.
 %----------------------------------------------------------------------------------------------------
 \subsection{Hierarchy operations}
 
-It is natural to consider state changes that might `happen' to hierarchies. We will try to understand how tasks are moved between control groups in a hierarchy, how a new task is inserted (into the system, and therefore into the groups), how a new control group is created, and how tasks and control groups are deleted. Describing each of these operations precisely challenges our state descriptions and constraints---which is a good thing.
+It is natural to consider state changes that might `happen' to hierarchies.
+We will try to understand how an hierarchy is initialised, how new tasks enter or leave an hierarchy, 
+and how tasks are moved between control groups in an hierarchy.
+Then we can consider how a new control group is created or destroyed.
+
+Describing each of these operations precisely challenges our state descriptions and constraints---which helps us
+to believe that they capture exactly what we want to say.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Initialisation}
 
-We first consider initialisation of a hierarchy. This is a sort of degenerate operation, as is common in Z specifications.
+We first consider initialisation of an hierarchy. This is a sort of degenerate operation, as is common in Z specifications.
 
 \begin{schema}{InitCGHierarchy}
 CGHierarchy' \\
@@ -426,16 +432,86 @@ CGHierarchy' \\
 ( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
 \land taskset' = systasks' ~~)
 \end{schema}
-We here \emph{decide} that all existing system tasks are placed in the initial $CGroup$, 
-with the standard root name\footnote{Although we have decided this, 
+We here \emph{decide}\footnote{Although we here \emph{decide} this, 
 we do not yet know if this is true. However, an assertion like this has the enormous advantage that it can be verified 
-and tested, as can all of the state descriptions. If necessary we can come back and change it.}. 
+and tested, as can all of the state descriptions. If necessary we will come back and change it.}
+that all existing system tasks are placed in the initial $CGroup$, 
+with the special root name. 
 Good job we declared it beforehand!
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Create a new $CGroup$ in a hierarchy}
+\subsubsection*{System task operations}
 
-How does a new control group arise (in a hierarchy)?
+Since $Tasks$ is part of our $CGHierarchy$ state, it is natural to want to use our description of system task operations $CreateTask$ 
+and $DestroyTask$ when describing the effect upon an hierarchy. The create and destroy operation on
+$Tasks$ can be elaborated to explain what happens on the extended state. 
+This is called ``promotion'' and has well-trodden precedents in Z.
+
+We first say what all of these elaborations have in common (expressed as a ``promotion'' schema), 
+which in our case says that fundamental task operations only affect a single task in the hierarchy, while 
+everything else remains fixed.
+
+The $PromoteTaskOp$ says what remains fixed when promoting a system task operation to an hierarchy, with respect
+to a single $task$. It is a skeleton operation schema.
+
+\begin{schema}{PromoteTaskOp}
+task : TASK
+\also
+\Delta CGHierarchy
+\where
+systasks' \setminus \{ task \} = systasks \setminus \{ task \}
+\also
+\{ task \} \ndres cgroup' = \{ task \} \ndres cgroup \\
+\dom cg' = \dom cg
+\end{schema}
+This needs some explaining; the three clauses can be described thus:
+
+Except for a particular $task$, the system tasks are unaffected (neither created nor destroyed).
+Except for this same $task$, the association between tasks and their control group path names is unaffected.
+The control group (directory) structure is likewise unaffected.
+
+With this skeleton\footnote{We notice, for the first time, just how symmetric this is: 
+reverse all the (state) operations (swapping primed state for non-primed state---for 
+example $cgroup'$ swaps with $cgroup$) and we have the same promotion schema.}
+we can describe the next two operations easily.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{Create a new task in an hierarchy}
+
+Here we promote $CreateTask$.
+
+\begin{schema}{CreateTaskInCG}
+CreateTask \\
+PromoteTaskOp[task! / task]
+\where
+cgroup' ~ task! = cgroup ~ parent?
+\end{schema}
+The particular task is renamed to be the \emph{output} task (the one created). 
+Everything else stays the same (see $PromoteTaskOp$) and the new $task!$ goes in the $parent?$'s control group.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{Destroy an existing task in an hierarchy}
+
+Deleting a task from the system is even easier:
+
+\begin{schema}{DestroyTaskInCG}
+DestroyTask \\
+PromoteTaskOp[task? / task]
+\end{schema}
+The particular task is renamed to be the \emph{input} task (the one to be deleted).
+Everything else stays the same (see $PromoteTaskOp$). 
+No more needs to be said, since after $DestroyTask$ removes $task?$ from $systasks'$, 
+everything else is `healed' by the constraints in the promotion.
+
+We are heartened by this description: $PromoteTaskOp$ captures exactly what we mean by a `task-local' change,
+and is sufficient to precisely describe the effects on the $CGHierarchy$ when such changes occur, excepting only 
+when there is
+an hierarchy-specific piece of information to supply.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{Create a new $CGroup$ in an hierarchy}
+
+How does a new control group arise (in an hierarchy)?
 Clearly we need to name it, and it must have an initial state, but there are also things to do with the
 hierarchy that have to be true, and we mustn't disturb the task structure of the system when
 creating a new control group, either:
@@ -458,7 +534,7 @@ What does it mean for the path to `fit'? It means that all its prefixes are in $
 The constraint which says `$path?$ is not the root', is strictly redundant (it can be derived from the rest of the constraints).
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Delete a $CGroup$ from a hierarchy}
+\subsubsection*{Delete a $CGroup$ from an hierarchy}
 
 When a control group is deleted, what happens to its tasks or its children (in the hierarchy)?
 This is explain here by saying that you can only destroy control groups that don't have tasks or children.
@@ -492,7 +568,7 @@ Doing it this way actually helped us to (write and) understand them.
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Move a task from one $CGroup$ to another}
 
-Within a hierarchy we want to explain what happens if we move a task from one control group to another.
+Within an hierarchy we want to explain what happens if we move a task from one control group to another.
 
 The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy. We need to supply the task which we are moving ($t?$), and the (full name of the) control group we are moving it to ($dest?$). We do not need to supply the control group it `moves from', because the hierarchy state has that information already.
 
