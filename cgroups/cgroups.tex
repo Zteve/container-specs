@@ -445,16 +445,16 @@ Good job we declared it beforehand!
 Since $Tasks$ is part of our $CGHierarchy$ state, it is natural to want to use our description of system task operations $CreateTask$ 
 and $DestroyTask$ when describing the effect upon an hierarchy. The create and destroy operation on
 $Tasks$ can be elaborated to explain what happens on the extended state. 
-This is called ``promotion'' and has well-trodden precedents in Z.
+In general this is called ``promotion'' and has well-trodden precedents in Z. Our usage here is more of an extension.
 
-We first say what all of these elaborations have in common (expressed as a ``promotion'' schema), 
-which in our case says that fundamental task operations only affect a single task in the hierarchy, while 
+We first say what all of these extensions have in common (expressed as a ``promotion'' schema), 
+which in our case says that fundamental task operations only affect a \emph{single task} in the hierarchy, while 
 everything else remains fixed.
 
-The $PromoteTaskOp$ says what remains fixed when promoting a system task operation to an hierarchy, with respect
-to a single $task$. It is a skeleton operation schema.
+The $SingleTaskOp$ explains what remains fixed when performing a system task operation in an hierarchy. 
+It is a skeleton operation schema which we can adapt to particular cases.
 
-\begin{schema}{PromoteTaskOp}
+\begin{schema}{SingleTaskOp}
 task : TASK
 \also
 \Delta CGHierarchy
@@ -466,47 +466,88 @@ systasks' \setminus \{ task \} = systasks \setminus \{ task \}
 \end{schema}
 This needs some explaining; the three clauses can be described thus:
 
-Except for a particular $task$, the system tasks are unaffected (neither created nor destroyed).
-Except for this same $task$, the association between tasks and their control group path names is unaffected.
+Except possibly for $task$, the system tasks are unaffected (neither created nor destroyed).
+Except for this same $task$, the association between tasks and their control group path names ($cgroup$) is unaffected.
 The control group (directory) structure is likewise unaffected.
 
+Note that, as we noted before, the map $cgroup'$, which is \emph{derived state}, 
+uniquely determines the partition ($tasks \circ cg$) except possibly for
+empty control groups. And, \emph{vice versa}, the partition determines the $cgroup$ map. 
+
+Simply saying what the new $cgroup$ map should be and that no extra empty control groups arise 
+(which is the force of $\dom cg = \dom cg'$) 
+suffices to determine the rest of the new state, partition included.
+
 With this skeleton\footnote{We notice, for the first time, just how symmetric this is: 
-reverse all the (state) operations (swapping primed state for non-primed state---for 
-example $cgroup'$ swaps with $cgroup$) and we have the same promotion schema.}
-we can describe the next two operations easily.
+reverse all the (state) operations (swapping all primed states with their un-primed states---for 
+example $cgroup'$ and $cgroup$ are exchanged) and we have the same promotion schema.}
+we can describe the next operations easily.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Create a new task in an hierarchy}
 
-Here we promote $CreateTask$.
+Here we extend $CreateTask$ as a $SingleTaskOp$eration on an hierarchy.
 
 \begin{schema}{CreateTaskInCG}
 CreateTask \\
-PromoteTaskOp[task! / task]
+SingleTaskOp[task! / task]
 \where
 cgroup' ~ task! = cgroup ~ parent?
 \end{schema}
 The particular task is renamed to be the \emph{output} task (the one created). 
-Everything else stays the same (see $PromoteTaskOp$) and the new $task!$ goes in the $parent?$'s control group.
+Everything else stays the same (see $SingleTaskOp$) and the new $task!$ goes in the $parent?$'s control group.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Destroy an existing task in an hierarchy}
 
-Deleting a task from the system is even easier:
+Deleting a task from the system is even easier to explain:
 
 \begin{schema}{DestroyTaskInCG}
 DestroyTask \\
-PromoteTaskOp[task? / task]
+SingleTaskOp[task? / task]
 \end{schema}
 The particular task is renamed to be the \emph{input} task (the one to be deleted).
-Everything else stays the same (see $PromoteTaskOp$). 
+Everything else stays the same (see $SingleTaskOp$). 
 No more needs to be said, since after $DestroyTask$ removes $task?$ from $systasks'$, 
 everything else is `healed' by the constraints in the promotion.
 
-We are heartened by this description: $PromoteTaskOp$ captures exactly what we mean by a `task-local' change,
+We are heartened by this: $SingleTaskOp$ captures exactly what we mean by a `task-local' change,
 and is sufficient to precisely describe the effects on the $CGHierarchy$ when such changes occur, excepting only 
 when there is
 an hierarchy-specific piece of information to supply.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection*{Move a task from one control group to another}
+
+Within an hierarchy we want to explain what happens if we move a task from one control group to another.
+The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy. 
+We need to supply the task which we are moving ($task?$), 
+and the (full name of the) control group we are moving it to ($dest?$). 
+We do not need to supply the control group it `moves from', because the hierarchy state has that information already.
+
+This, it turns out, is another ``single task operation'', so we can use $SingleTaskOp$ again to help to explain it.
+
+\begin{schema}{MoveCGroupTask}
+dest? : CGPath
+\also
+SingleTaskOp[task? / task] \\
+\Xi Tasks 
+\where
+task? \in systasks \\
+dest? \in \dom cg
+\also
+cgroup' ~ task?  = dest?
+\end{schema}
+The constraints on the inputs are that the $task?$ exists already and 
+the path ($dest?$) is the name of a known control group (of this hierarchy).
+The new map $cgroup'$ must map $task?$ to the control group with path name $dest?$.
+
+Amazingly, this is all we need to say. The last line implies that $task? \in \dom cgroup'$ and therefore
+$tasks? \in systasks'$ too (from $CGHierarchy'$). 
+
+$\Xi Tasks$ ensures that $task?$ must also be in $systasks$ before we start, so `the task exists already' is implied by the last line, although we prefer to be explicit about it.
+
+The $SingleTaskOp$ constraints fix everything else for us.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection*{Create a new $CGroup$ in an hierarchy}
@@ -564,34 +605,6 @@ Doing it this way actually helped us to (write and) understand them.
 % \end{schema}
 % \begin{schema}{DeleteCGroupTask}
 % \end{schema}
-
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Move a task from one $CGroup$ to another}
-
-Within an hierarchy we want to explain what happens if we move a task from one control group to another.
-
-The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy. We need to supply the task which we are moving ($t?$), and the (full name of the) control group we are moving it to ($dest?$). We do not need to supply the control group it `moves from', because the hierarchy state has that information already.
-
-\begin{schema}{MoveCGroupTask}
-t? : TASK \\
-dest? : CGPath
-\also
-\Delta CGHierarchy \\
-\Xi Tasks 
-\where
-t? \in systasks \\
-dest? \in \dom cg
-\also
-\dom cg = \dom cg' \\
-cgroup' = cgroup \oplus \{ ~t? \mapsto dest? ~\}
-\end{schema}
-The constraints on the inputs are that the task exists already and that the name is the name of a known control group (of this hierarchy). The new map $cgroup'$ is the same as the old one, except that the input task, $t?$, is now mapped to the control group named $dest?$, and no more control groups are introduced by this operation.
-
-Amazingly, this is all we need to say.
-
-The map $cgroup'$, which we noted above was \emph{derived state}, uniquely determines the partition (except for
-empty control groups) 
-and \emph{vice versa}, so simply saying what the new map should be (and that no extra empty control groups arise) suffices to determine the rest of the new state, with the partition constraint holding.
 
 %=============================================================================
 \section{Subsystems}
