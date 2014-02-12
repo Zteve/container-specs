@@ -2,7 +2,7 @@
 \usepackage{zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.1}
+\markboth{Draft}{Version 0.2}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -10,7 +10,7 @@
 
 \def\Slash{\slash\hspace{0pt}}
 
-\title{A Model of Linux Control Groups}
+\title{A Model of Linux Control Groups and Subsystems}
 
 \author{
 Glyn Normington\and
@@ -27,18 +27,18 @@ Steve Powell
 
 %=============================================================================
 
-This is a working document which serves to record the justifications, deliberations and results of an attempt to
-specify precisely some (or all) of the features of \emph{Linux control groups} which can support robust and reliable development of \emph{Warden} and related products.
+This is a working document which serves to record the justifications, deliberations and results\footnote{but 
+not, alas, the mistakes} of an attempt to
+specify precisely some (or all) of the features of \emph{Linux control groups} and \emph{subsystems} which can support robust and reliable development of \emph{Warden} and related products.
 
 \paragraph{Current ``to-do'' list:}
 \begin{itemize}
-\item \emph{ops}--- describe more operations (e.g. on $CGroupsTasks$); (\textsc{Done})
-\item \emph{hierarchy}--- describe trees of $CGroup$s; (\textsc{Done})
-\item \emph{subsystem}--- describe subsystems and attachment to $CGroup$s;
-\item \emph{RedHat rule 2}--- make rule 2 into a constraint on subsystems+hierarchies;
-\item \emph{RedHat rules}--- ensure all RedHat rules are represented correctly.
+\item \emph{ops}---describe more operations (e.g. on $CGroupsTasks$); (\textsc{Done})
+\item \emph{hierarchy}---describe trees of $CGroup$s; (\textsc{Done})
+\item \emph{subsystem}---describe subsystems and attachment to $CGroup$s;
+\item \emph{RedHat rule 2}---make rule 2 into a constraint on subsystems+hierarchies;
+\item \emph{RedHat rules}---ensure all RedHat rules are represented correctly.
 \end{itemize}
-
 
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
@@ -144,7 +144,7 @@ allow you to associate a set of CPUs and a set of memory nodes with
 the tasks in each cgroup.
 \end{verbatim}}
 Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it is
-full of specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; and it is no worse---and in many ways better---than many such.}. For example, it is ambiguous concerning the number of and relationship between hierarchies; it
+full of specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; and it is no worse---and in many ways better---than many such.} (see \cite{7sins}). For example, it is ambiguous concerning the number of and relationship between hierarchies; it
 doesn't explain what the initial state of a control group is; it talks about tasks and processes as though they were the same without comment (we think they are the same, but we're not sure); the rules about the relationship between tasks and control groups sound contradictory; and so on.
 
 We very much hope to address these puzzles (and more) in the following sections.
@@ -162,10 +162,11 @@ See the discussion \cite{noop}.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Experiments}
+\label{sec:experiments}
 We performed some simple experiments on a (virtual, and hence infinitely refreshable) Linux machine.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Multiple subsystems}
+\subsubsection{Multiple subsystems}
 
 Attaching multiple subsystems to a single hierarchy:
 {\small \begin{verbatim}
@@ -208,7 +209,7 @@ none /tmp/warden/cgroup/test cgroup rw,relatime,blkio,cpuset 0 0
 \end{verbatim}}
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Multiple hierarchies}
+\subsubsection{Multiple hierarchies}
 
 Attaching a single subsystem to multiple hierarchies:
 {\small \begin{verbatim}
@@ -241,7 +242,7 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 \end{verbatim}}
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Overlapping hierarchies}
+\subsubsection{Overlapping hierarchies}
 
 Attaching a new subsystem to one of the hierarchies attached to an existing subsystem (this follows on from the previous experiment):
 {\small \begin{verbatim}
@@ -253,26 +254,38 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 \end{verbatim}}
 
 %=============================================================================
-\section{Control groups}
+\section{Fundamentals}
 
-We begin by attempting to describe control groups.
+We begin by describing some fundamental pieces of our description.
 
 %----------------------------------------------------------------------------------------------------
-\subsection{Fundamentals}
-There are fundamental sets of items we will not look into, for example $TASK$s.
+\subsection{Given sets}
+There are fundamental sets of items we will not look into, for example $TASK$s:
 \begin{zed}
 [TASK]
 \end{zed}
+which appear in collections in each control group.
 
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{A single control group}
+There are $RESOURCE$s, which can be allocated, managed and monitored:
+\begin{zed}
+[RESOURCE]
+\end{zed}
+and which we will use to represent our abstract notion of a subsystem.
+
+There are names, of which there are many types, here are two of them:
+\begin{zed}
+[SIMPLENAME, SSNAME]
+\end{zed}
+the simple names out of which control group (path)names are formed, and the subsystem names.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{A single control group}
 
 A single control group in isolation is just a (finite) collection of tasks, and we can document this:
 
 \begin{schema}{CGroup}
 taskset : \finset TASK
 \end{schema}
-We do not feel the need to elaborate on this (at the moment).
 
 As a convenience, we define the (global) function $tasks$ which extracts the $taskset$ from a $CGroup$, and the
 simple control group $EmptyCGroup$ which has no tasks in it:
@@ -282,15 +295,10 @@ tasks == (\lambda CGroup @ taskset)
 EmptyCGroup == (\mu CGroup | taskset = \emptyset )
 \end{zed}
 
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Control group names}
+%----------------------------------------------------------------------------------------------------
+\subsection{Control group path names}
 
-Control groups have names, but these have a structure---a file directory-like structure---so we define them as \emph{sequences} of simple names (think of these as directory names). The latter we will not define further:
-
-\begin{zed}
-[SIMPLENAME]
-\end{zed}
-and control group names are sequences of these, for which we use the shorthand $CGPath$:
+Control groups have names, but these have a structure---a file directory-like structure---so we define them as \emph{sequences} of simple names (think of these as directory names), for which we use the shorthand $CGPath$:
 
 \begin{zed}
 CGPath == \seq SIMPLENAME
@@ -335,7 +343,7 @@ INITIALTASK \in systasks
 which has the (pleasing) consequence that there is always at least one task in the system.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Initialisation}
+\subsubsection{Initialisation}
 
 When the system tasks are first created, then, this $INITIALTASK$ must exist, which is to say that there is at least one task. We simplify it by saying there is exactly one (though we are not usually around to see this natal state).
 
@@ -347,9 +355,9 @@ Tasks'
 We may not need to use this property directly.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Creating a new task}
+\subsubsection{Creating a new task---lowest level}
 
-We do need to speak about new task creation, and so here is how we model it in the system:
+We do need to speak about new task creation later, and so here is how we model it, from the point of view of $Tasks$:
 
 \begin{schema}{CreateTask}
 parent? : TASK \\
@@ -365,9 +373,9 @@ The new task has to have a (designated) parent, which is just any existing syste
 in the system and is inserted into the system, without disturbing any other tasks.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Destroying a task}
+\subsubsection{Destroying a task---lowest level}
 
-Task destruction is also needed in the context of control groups:
+Task destruction is also needed later in the context of control groups, but from the point of view of $Tasks$ we can say:
 
 \begin{schema}{DestroyTask}
 task? : TASK
@@ -378,17 +386,26 @@ task? \in systasks \\
 task? \neq INITIALTASK \\
 systasks'  = systasks \setminus \{ task? \}
 \end{schema}
-The task being destroyed is already in the system; it must not be the system's initial task (this could have been a derived restriction, since $Tasks'$ already insists that $INITIALTASK$ must remain in $systasks'$);
+The task being destroyed is already in the system; it must not be the system's initial task 
+(this constraint could have been \emph{derived} since $Tasks'$ already insists that $INITIALTASK$ 
+must remain in $systasks'$);
 the task is removed from the set of system tasks, without disturbing the other tasks.
 
-Of course we know there is a parent/child relationship between tasks which the system knows and maintains. We don't think we need to know about that (except at create time) so we don't model 
-it\footnote{If we need this it will become clear later when we cannot express a constraint, or cannot describe a change of state correctly.}.
+Of course we know there is a parent/child relationship between tasks which the system knows and maintains. 
+We don't think we need to know about that (except at create time) so we don't model 
+it\footnote{If we need this it will become clear later when we cannot express a constraint, 
+or cannot describe a change of state correctly.}.
 
-%----------------------------------------------------------------------------------------------------
-\subsection{Control group hierarchy}
-Now we can combine the named control groups and system tasks and say how they should be related. At the same time we can describe a function $cgroup$ which maps each task to a control group in the collection.
+%=============================================================================
+\section{Control group hierarchies}
 
-We are defining a \emph{hierarchy} of control groups.
+Although it appears not possible to have a control group hierarchy without an attached subsystem 
+(see section~\ref{sec:experiments}) we find it easier to consider hierarchies in isolation first.
+
+We combine the named control groups and system tasks and say how they should be related. 
+At the same time we describe a function $cgroup$ which maps each task to a control group in the collection.
+
+We are defining a \emph{hierarchy} of control groups:
 
 \begin{schema}{CGHierarchy}
 Tasks \\
@@ -401,11 +418,18 @@ tasks \circ cg \partition systasks
 \dom cgroup = systasks \\
 \forall t : systasks @ t \in tasks ( cg (cgroup ~ t))
 \end{schema}
-Each task of the system is in precisely one control group, or, as expressed here, the control group tasks \emph{partition} the system tasks; \emph{and} there is a function ($cgroup$) which maps each system task to the (full) name ($CGPath$) of the control group in which it resides.
+Each task of the system is in precisely one control group, or, as expressed here, 
+the control group tasks \emph{partition} the system tasks; 
+\emph{and} there is a function ($cgroup$) which maps each system task to the (full) name 
+($CGPath$) of the control group in which it resides.
 
-It is important to note that the existence of the function $cgroup$ is guaranteed by the partition requirement that accompanies it. It is what is called `derived state', and these assertions impose no extra constraints. In fact, the existence of $cgroup$ is \emph{equivalent} to the partition constraint.
+We note that the existence of the function $cgroup$ is guaranteed by the partition requirement 
+(on $tasks \circ cg$) that accompanies it. 
+The function $cgroup$ is `derived state', and these assertions impose no extra constraints upon an hierarchy. 
+In fact, the existence of $cgroup$ is \emph{equivalent} to the partition constraint.
 
-It is legitimate to ask how a $CGHierarchy$ is initialised. We do so next.
+It is legitimate to ask how a $CGHierarchy$ is initialised. 
+We describe this next along with other operations on an hierarchy.
 
 
 %----------------------------------------------------------------------------------------------------
@@ -414,13 +438,13 @@ It is legitimate to ask how a $CGHierarchy$ is initialised. We do so next.
 It is natural to consider state changes that might `happen' to hierarchies.
 We will try to understand how an hierarchy is initialised, how new tasks enter or leave an hierarchy, 
 and how tasks are moved between control groups in an hierarchy.
-Then we can consider how a new control group is created or destroyed.
+Then we can consider how a new control group of an hierarchy is created or destroyed.
 
 Describing each of these operations precisely challenges our state descriptions and constraints---which helps us
 to believe that they capture exactly what we want to say.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Initialisation}
+\subsubsection{Initialisation}
 
 We first consider initialisation of an hierarchy. This is a sort of degenerate operation, as is common in Z specifications.
 
@@ -440,10 +464,10 @@ with the special root name.
 Good job we declared it beforehand!
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{System task operations}
+\subsubsection{A single task operation skeleton}
 
 Since $Tasks$ is part of our $CGHierarchy$ state, it is natural to want to use our description of system task operations $CreateTask$ 
-and $DestroyTask$ when describing the effect upon an hierarchy. The create and destroy operation on
+and $DestroyTask$ when describing the (extra) effects upon an hierarchy. The create and destroy operation on
 $Tasks$ can be elaborated to explain what happens on the extended state. 
 In general this is called ``promotion'' and has well-trodden precedents in Z. Our usage here is more of an extension.
 
@@ -484,7 +508,7 @@ example $cgroup'$ and $cgroup$ are exchanged) and we have the same promotion sch
 we can describe the next operations easily.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Create a new task in an hierarchy}
+\subsubsection{Create a new task in an hierarchy}
 
 Here we extend $CreateTask$ as a $SingleTaskOp$eration on an hierarchy.
 
@@ -498,7 +522,7 @@ The particular task is renamed to be the \emph{output} task (the one created).
 Everything else stays the same (see $SingleTaskOp$) and the new $task!$ goes in the $parent?$'s control group.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Destroy an existing task in an hierarchy}
+\subsubsection{Destroy an existing task in an hierarchy}
 
 Deleting a task from the system is even easier to explain:
 
@@ -517,7 +541,7 @@ when there is
 an hierarchy-specific piece of information to supply.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Move a task from one control group to another}
+\subsubsection{Move a task from one control group to another}
 
 Within an hierarchy we want to explain what happens if we move a task from one control group to another.
 The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy. 
@@ -550,7 +574,7 @@ $\Xi Tasks$ ensures that $task?$ must also be in $systasks$ before we start, so 
 The $SingleTaskOp$ constraints fix everything else for us.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Create a new $CGroup$ in an hierarchy}
+\subsubsection{Create a new $CGroup$ in an hierarchy}
 
 How does a new control group arise (in an hierarchy)?
 Clearly we need to name it, and it must have an initial state, but there are also things to do with the
@@ -572,13 +596,13 @@ The control group path name is not an existing path (it's not in the old state);
 
 What does it mean for the path to `fit'? It means that all its prefixes are in $\dom cg$ already. Equivalently, its immediate parent (the `front' of the sequence) is there.
 
-The constraint which says `$path?$ is not the root', is strictly redundant (it can be derived from the rest of the constraints).
+The constraint which says `$path?$ is not the root', is strictly redundant (it can be derived from the other constraints).
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection*{Delete a $CGroup$ from an hierarchy}
+\subsubsection{Delete a $CGroup$ from an hierarchy}
 
 When a control group is deleted, what happens to its tasks or its children (in the hierarchy)?
-This is explain here by saying that you can only destroy control groups that don't have tasks or children.
+This is explained by saying that you can only destroy control groups that don't have tasks or children.
 Here is how this can be formalised:
 
 \begin{schema}{DestroyCGroup}
@@ -594,9 +618,9 @@ cgroup' = cgroup
 \end{schema}
 The constraints say: this is not a new path (it's not in the new state); it cannot be the root; the path identifies the empty control group (in the old state); the task partition is unaffected.
 
-Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly, this means it cannot have had any children.
+Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly, this means it cannot have had any children beforehand.
 
-In this case the constraint which says $path?$ is not the root, is \emph{not} redundant.
+The constraint which says `$path?$ is not the root', is \emph{also} redundant. It is harder to see why in this case, but removing the root would produce a $CGHierarchy'$ with an empty map $cg'$. The constraints on $CGHierarchy'$ (in particular from the $NamedCGroups'$ schema) prohibit this.
 
 The constraints for $Create$... and $Destroy$... are deliberately symmetric.
 Doing it this way actually helped us to (write and) understand them.
@@ -666,6 +690,10 @@ tbd
   \emph{Red Hat Enterprise Linux 6.5 GA: Resource Management Guide}, 
   {\small \texttt{https://access.redhat.com/site/documentation/en-US\slash{}Red\_Hat\_Enterprise\_Linux/6/pdf/Resource\_Management\_Guide\slash{}Red\_Hat\_Enterprise\_Linux-6-Resource\_Management\_Guide-en-US.pdf}}.
 
+\bibitem{7sins}
+  Bertrand Meyer,
+  \emph{On Formalism In Specifications},
+  IEEE Software, Vol.~2(1), 1985.
 \end{thebibliography}
 \end{flushleft}
 \end{document}
