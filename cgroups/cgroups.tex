@@ -55,7 +55,7 @@ specify precisely some (or all) of the features of \emph{Linux control groups} a
 \clearpage
 \tableofcontents
 
-\clearpage
+\cleardoublepage
 \pagenumbering{arabic}
 
 %=============================================================================
@@ -277,6 +277,48 @@ There are names, of which there are many types, here are two of them:
 [SIMPLENAME, SSNAME]
 \end{zed}
 the simple names out of which control group (path)names are formed, and the subsystem names.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{Sets of resources}
+
+A subsystem will be concerned with resources, and we will model that by a set associated 
+with a control group. It is simpler to start with the resource sets by themselves.
+
+There is a $ResourceSet$ type:
+\begin{zed}
+ResourceSet == \finset RESOURCE
+\end{zed}
+a piece of state which holds one of them:
+\begin{schema}{Resources}
+rs : ResourceSet
+\end{schema}
+and these states begin by being empty:
+\begin{zed}
+InitResources \defs [ Resources' | rs' = \emptyset ]
+\end{zed}
+
+The basic operations not very interesting: simply adding and removing elements, which we expect happens
+in batches (sets):
+
+\begin{schema}{AddResources}
+rs? : ResourceSet
+\also
+\Delta Resources
+\where
+rs' = rs \cup rs?
+\end{schema}
+where we just stick 'em all in.
+
+\begin{schema}{RemoveResources}
+rs? : ResourceSet
+\also
+\Delta Resources
+\where
+rs' = rs \setminus rs? 
+\end{schema}
+where we just take 'em all out.
+
+These become more interesting when used in the context of a subsystem, for which see later.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{A single control group}
@@ -595,7 +637,6 @@ cgroup' = cgroup
 The control group path name is not an existing path (it's not in the old state); it cannot be the root; the new path must point to the empty control group, and the path must `fit' into the $cg$ map (see below); the task partition is unaffected.
 
 What does it mean for the path to `fit'? It means that all its prefixes are in $\dom cg$ already. Equivalently, its immediate parent (the `front' of the sequence) is there.
-
 The constraint which says `$path?$ is not the root', is strictly redundant (it can be derived from the other constraints).
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -616,36 +657,135 @@ path? \neq ROOTCGROUPNAME \\
 cg = cg' \cup \{ path? \mapsto EmptyCGroup \} \\
 cgroup' = cgroup
 \end{schema}
-The constraints say: this is not a new path (it's not in the new state); it cannot be the root; the path identifies the empty control group (in the old state); the task partition is unaffected.
+The constraints say: this is not a new path (it's not in the new state); it cannot be the root; 
+the path identifies the empty control group (in the old state); the task partition is unaffected.
 
-Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly, this means it cannot have had any children beforehand.
+Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly, 
+this means it cannot have had any children beforehand.
 
-The constraint which says `$path?$ is not the root', is \emph{also} redundant. It is harder to see why in this case, but removing the root would produce a $CGHierarchy'$ with an empty map $cg'$. The constraints on $CGHierarchy'$ (in particular from the $NamedCGroups'$ schema) prohibit this.
+The constraint which says `$path?$ is not the root', is \emph{also} redundant. 
+It is harder to see why in this case, but removing the root would produce a $CGHierarchy'$ with an empty map $cg'$. 
+The constraints on $CGHierarchy'$ (in particular from the $NamedCGroups'$ schema) prohibit this.
 
 The constraints for $Create$... and $Destroy$... are deliberately symmetric.
-Doing it this way actually helped us to (write and) understand them.
-
-% \begin{schema}{NewCGroupTask}
-% \end{schema}
-% \begin{schema}{DeleteCGroupTask}
-% \end{schema}
+Doing it this way helped us to (write and) understand them.
 
 %=============================================================================
 \section{Subsystems}
 
-tbd
+A $Subsystem$ is a collection of resource sets named by $CGPath$ names. We will eventually marry
+this with a $GCHierarchy$, but we consider it in isolation first.
+\begin{schema}{Subsystem}
+res : CGPath \ffun ResourceSet
+\also
+pinned : \finset CGPath
+\where
+pinned = \dom(res \nrres \{ \emptyset \})
+\end{schema}
+Resource sets ``named by control group path names'' are represented by the map $res$; 
+$pinned$ is derived state (completely determined by $res$) and consists of the control group path 
+names which refer to non-empty resource sets\footnote{$\dom(res \nrres \{ \emptyset \})$ 
+is a technical jewel, meaning the domain
+of the relation which is that subset of $res$ consisting of pairs that relate names to the empty
+resource set.}.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{Subsystem operations}
+We consider initialisation
+and basic resource update operations, which we lift from the $Resources$ operations we had before.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Initialisation}
+We cannot say everything about the initial subsystem (until the $CGHierarchy$ is available), but we can
+say:
+\begin{zed}
+InitSubsystem \defs [ Subsystem' | pinned' = \emptyset ]
+\end{zed}
+which doesn't tie down the domain of $res$, but at least says that there are no resources in its range.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Lifting the resource set operations}
+We want to add and remove resources from a particular named resource set. In general we can say
+how we lift an operation on resource sets to subsystems:
+
+\begin{schema}{SubsystemResourcesOp}
+cgp? : CGPath
+\also
+\Delta Subsystem \\
+\Delta Resources
+\where
+cgp? \in \dom res \\
+\{ cgp? \} \ndres res = \{ cgp? \} \ndres res' \\
+res ~ cgp? = rs \\
+res' ~ cgp? = rs'
+\end{schema}
+There is an input path name ($cgp?$) which must a known path name of the subsystem;
+all the resource sets, other than the one named $cgp?$, are not changed;
+the resource set named $cgp?$ is changed in precisely the way that the $Resources$ operation changes
+its resource set ($rs$ goes to $rs'$).
+
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Add and remove resources}
+When we combine $SubsystemResourcesOp$ with operations on $Resources$ 
+(which include the signature $\Delta Resources$)
+we get a lifted operation definition on $Subsystem$ except for the $\Delta Resources$ signature, 
+which we can then hide.
+
+\begin{zed}
+AddSSResources \defs \\
+\t2 \exists \Delta Resources @ ( AddResources \land SubsystemResourcesOp )
+\also
+RemoveSSResources \defs \\
+\t2 \exists \Delta Resources @ ( RemoveResources \land SubsystemResourcesOp )
+\end{zed}
+The $\exists \Delta Resources @$ prefix is just a clumsy way of hiding the $Resources$ and $Resources'$ states
+which we only needed to expose to explain the lifting, and should not be exposed on the 
+subsystem operation.
+
+Are these really operations on $Subsystem$?
+We can demonstrate that they are by deriving the ``signature'' of, for example, $AddSSResources$, 
+and it works out as\footnote{Not really,
+for we have preserved some constraints in the declarations to make it easier to relate to our other operations.}:
+
+\begin{schema*}
+rs? : ResourceSet\\
+cgp? : CGPath\\
+\Delta Subsystem
+\end{schema*}
+which is clearly an operation with inputs $rs?$, a set of resources, and $cgp?$, a path name, as we would expect.
+
+%=============================================================================
+\section{Attached subsystems}
+$Subsystem$ is pretty an\ae{}mic because it is not `attached' to a hierarchy. This is what we describe next.
+
+\begin{schema}{AttachedSubsystem}
+Subsystem \\
+CGHierarchy
+\where
+\dom res = \dom cg
+\end{schema}
+Which says that the control group paths that the subsystem tracks are precisely the ones in
+the hierarchy. The operations on $CGHierarchy$ and those on $Subsystem$ can now be lifted to $AttachedSubsystem$
+by similar lifting mechanisms we used before.
+
+What is interesting is that the constraints (aka preconditions) imposed by $CGHierarchy$ operations combine via the
+$AttachedSubsystem$ constraint, to enable us to derive the preconditions of the lifted operations.
+
 
 \clearpage
 
 \appendix
 
 \begin{flushleft}
-\begin{thebibliography}{99}   % `99' is a picture of the maximum generated numeric references -- they are two digits in this bibliography
+\begin{thebibliography}{99}   
+% `99' is a picture of the generated numeric references -- they are two digits in this bibliography 
+% If we had a hundred or more we would have used 999, or whatever.
 
 %%  Example bibliography entry:
-%\bibitem{knuth76} % citation callout, e.g.: \cite{knuth76}
-%  Donald E. Knuth, % author
-%  \emph{The computer as Master Mind}. % title
+%\bibitem{knuth76}                                                        % citation callout, e.g.: \cite{knuth76}
+%  Donald E. Knuth,                                                        % author
+%  \emph{The computer as Master Mind}.                    % title
 %  J. Recreational Mathematics, Vol.~9(1), 1976-1977. % publisher, or journal, volume and date
 
 \bibitem{warden}
