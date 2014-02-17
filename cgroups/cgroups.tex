@@ -35,7 +35,7 @@ specify precisely some (or all) of the features of \emph{Linux control groups} a
 \begin{itemize}
 \item \emph{ops}---describe more operations (e.g. on $CGroupsTasks$); (\textsc{Done})
 \item \emph{hierarchy}---describe trees of $CGroup$s; (\textsc{Done})
-\item \emph{subsystem}---describe subsystems and attachment to hierarchies;
+\item \emph{subsystem}---describe subsystems and attachment to hierarchies; (\textsc{Done} -- almost)
 \item \emph{RedHat rule 2}---make rule 2 into a constraint on subsystems+hierarchies;
 \item \emph{RedHat rules}---ensure all RedHat rules are represented correctly.
 \end{itemize}
@@ -93,6 +93,7 @@ As input to this work we access the following sources of information:
 \item[Kernel code] the Linux Kernel \cite{linuxkernel};
 \item[experiments] tests run against the CGroups kernel code (on a shared VM);
 \item[RedHat article] an article about CGroups written by RedHat which provides some invariants of the pseudo-filesystem state \cite{rharticle}.
+\item[Linux kernel mailing list] \cite{noop} where we asked questions and got informative and timely answers.
 \end{description}
 
 %----------------------------------------------------------------------------------------------------
@@ -720,7 +721,7 @@ letting it `flap' completely (except for the usual subsystem state constraints, 
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Lifting the resource set operations}
-We want to add and remove resources from a particular named resource set. In general we can say
+We want to add and remove resources from a particular resource set. In general we can say
 how we lift an operation on resource sets to subsystems:
 
 \begin{schema}{SubsystemResourcesOp}
@@ -734,8 +735,8 @@ cgp? \in \dom res \\
 res ~ cgp? = rs \\
 res' ~ cgp? = rs'
 \end{schema}
-There is an input path name ($cgp?$) which must a known path name of the subsystem;
-all the resource sets, other than the one named $cgp?$, are not changed;
+There is an input path name ($cgp?$) which must be a known name of the subsystem;
+the resource sets (other than the one named $cgp?$) are not changed;
 the resource set named $cgp?$ is changed in precisely the way that the $Resources$ operation changes
 its resource set ($rs$ goes to $rs'$).
 
@@ -796,7 +797,8 @@ $AttachedSubsystem$ constraint, to enable us to derive many (but not all) of the
 The initially attached subsystem ought to be a simple combination of initial subsystem and initial hierarchy; and it is:
 
 \begin{zed}
-InitAttachedSubsystem \defs AttachedSubsystem' \land InitSubsystem \land InitCGHierarchy
+InitAttachedSubsystem \defs \\
+\t1 AttachedSubsystem' \land InitSubsystem \land InitCGHierarchy
 \end{zed}
 simplesh.
 
@@ -828,9 +830,11 @@ Here we've introduced a local shorthand $cgp$ for $cgroup' ~ task!$, the name of
 the new task ($task!$); the resource-set map, $res$, remains the same on all control groups except this one;
 on this one the resource set usage may increase (but it cannot decrease).
 
-This is intentionally non-deterministic because we cannot say what resources a new task might require (and get charged for), or, indeed, what its parent might require. In general, then, we might add resources into the control group.
+This is intentionally non-deterministic because we cannot say what resources a new task might require or 
+what its parent might require. In general, then, we might add resources into the control group.
 
-Note that it is possible for the $pinned$ set to increase (if it happened that $cgp$ used no resources before), but if this happens it is only by the one extra control group (named $cgp$).
+Note that it is possible for the $pinned$ set to increase but only by the addition of the single control group 
+named $cgp$.
 
 \subparagraph{Destroy a task:}
 We have to explain what parts of the subsystem may change when a task is destroyed:
@@ -870,7 +874,7 @@ In general the transfer may involve extra resources, or it may reduce the resour
 subsystems might be able to say more about this.
 
 Again it is instructive to consider what happens if the source and destination are the same control group. The specification implies that this is a no-op: the resources used are unchanging. It remains to be seen if this is the case,
-but we would be surprised it it wasn't.  It is nice to see this falling out of a general description.
+but we would be surprised if it wasn't.  It is nice to see this falling out of a general description.
 
 \subparagraph{Create a control group:}
 We have to explain what parts of the subsystem may change when a new control group is created:
@@ -884,7 +888,7 @@ res = \{path?\} \ndres res'
 \end{schema}
 The new control group uses no resources (and has no tasks you may recall from $CreateCGroup$); the resources
 for all the other control groups remain the same. Notice how the $\Delta AttachedSubsystem$ constraints save us
-from having to say stuff like `no new control groups magically appear'.
+from having to say stuff like `no other control groups magically appear'.
 
 \subparagraph{Destroy a control group:}
 We have to explain what parts of the subsystem may change when a control group is destroyed:
@@ -896,16 +900,31 @@ DestroyCGroup
 res ~ path? = \emptyset \\
 res' = \{path?\} \ndres res 
 \end{schema}
-The old control group \emph{must not use any resources}; the resources for all the other control groups remain 
+The control group being destroyed \emph{must not be using any resources};
+the resources for all the other control groups remain 
 the same. 
 
 Not using any resources tallies with the $CGHierarchy$ operation constraint that it must have no tasks when it is
-destroyed. We also get the parent-child restrictions for free (ultimately from $NamedCGroups$).
+destroyed, although not having tasks doesn't imply it is not using resources).
+
+We also get the parent-child restrictions for free (ultimately from $NamedCGroups$).
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Operations lifted from $Subsystem$}
 
-...tbd...
+Adding or removing resources rom a particular control group has no effect on the structure or the tasks
+in an hierarchy.
+
+We can therefore lift the $Add$ and $Remove$ resources operations directly as follows:
+
+\begin{zed}
+AddResourcesInAttachedSubsystem \defs \\
+\t1 AddSSResources \land \Delta AttachedSubsystem \land \Xi CGHierarchy
+\also
+RemoveResourcesInAttachedSubsystem \defs \\
+\t1 RemoveSSResources \land \Delta AttachedSubsystem \land \Xi CGHierarchy
+\end{zed}
+where $\Xi CGHierarchy$ documents that the hierarchy remains unchanged.
 
 \clearpage
 
