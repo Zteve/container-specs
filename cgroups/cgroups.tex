@@ -2,7 +2,7 @@
 \usepackage{zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.2}
+\markboth{Draft}{Version 0.4a - PromoteSingleSubsystemOps}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -925,6 +925,31 @@ RemoveResourcesInAttachedSubsystem \defs \\
 \t1 RemoveSSResources \land \Delta AttachedSubsystem \land \Xi CGHierarchy
 \end{zed}
 where $\Xi CGHierarchy$ documents that the hierarchy remains unchanged.
+
+\section{Many subsystems}
+
+
+\subsection{Many subsystems operations}
+
+\begin{schema}{MultiSubsystems}
+subNames : \finset SSName \\
+subs : SSName \ffun AttachedSubsystem \\
+CGHierarchy
+\where
+subNames = \dom subs \\
+\forall sn : subNames @ subs ~ sn = \theta CGHierarchy
+\end{schema}
+
+\subsubsection{Initialisation}
+
+\subsubsection{Lifting attached subsystem operations}
+
+\subparagraph{Create a task:}
+\subparagraph{Destroy a task:}
+\subparagraph{Move a task:}
+\subparagraph{Create a control group:}
+\subparagraph{Destroy a control group:}
+\subparagraph{Add and remove resources:}
 
 \clearpage
 
