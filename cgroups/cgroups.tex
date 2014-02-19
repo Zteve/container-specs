@@ -931,18 +931,40 @@ where $\Xi CGHierarchy$ documents that the hierarchy remains unchanged.
 
 \subsection{Many subsystems operations}
 
+\begin{zed}
+cgHierarchy == (\lambda AttachedSubsystem @ \theta CGHierarchy) 
+\end{zed}
+
+
 \begin{schema}{MultiSubsystems}
-subNames : \finset SSName \\
-subs : SSName \ffun AttachedSubsystem \\
+subNames : \finset SSNAME \\
+subs : SSNAME \ffun AttachedSubsystem \\
 CGHierarchy
 \where
 subNames = \dom subs \\
-\forall sn : subNames @ subs ~ sn = \theta CGHierarchy
+\forall sn : subNames @ \\
+    \t1 cgHierarchy(subs ~ sn) = \theta CGHierarchy
+\end{schema}
+
+\begin{schema}{MultiSubsystemsChange}
+\Delta MultiSubsystems
+\where
+subNames' = subNames
 \end{schema}
 
 \subsubsection{Initialisation}
 
+\begin{schema}{InitMultiSubsystems}
+MultiSubsystems' \\
+subNames? : \finset SSNAME 
+\where
+subNames' = subNames?
+\end{schema}
+
+
 \subsubsection{Lifting attached subsystem operations}
+
+
 
 \subparagraph{Create a task:}
 \subparagraph{Destroy a task:}
