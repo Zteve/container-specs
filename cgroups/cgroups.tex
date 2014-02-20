@@ -499,9 +499,9 @@ CGHierarchy' \\
 ( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
 \land taskset' = systasks' ~~)
 \end{schema}
-We here \emph{decide}\footnote{Although we here \emph{decide} this, 
-we do not yet know if this is true. However, an assertion like this has the enormous advantage that it can be verified 
-and tested, as can all of the state descriptions. If necessary we will come back and change it.}
+We here \emph{decide}\footnote{We do not yet know if this is true.
+However, an assertion like this has the enormous advantage that it can be verified 
+and tested, as can all of the state transition descriptions. If necessary we will come back and change it.}
 that all existing system tasks are placed in the initial $CGroup$, 
 with the special root name. 
 Good job we declared it beforehand!
@@ -964,9 +964,50 @@ subNames' = subNames?
 
 \subsubsection{Lifting attached subsystem operations}
 
+The operations to be lifted are: create,  destroy and move a task;
+create and destroy a control group; and add and remove resources, which should act on an 
+identified subsystem.
 
+These three groups of operations are lifted in different ways, reflecting the distinct effects they have on the 
+collection of named subsystems.
+
+\begin{schema}{MultiSsTaskOp}
+MultiSubsystemsChange \\
+task : TASK
+\end{schema}
+
+\begin{schema}{MultiSsCGHOp}
+MultiSubsystemsChange \\
+
+\end{schema}
+
+\begin{schema}{MultiSsResOp}
+MultiSubsystemsChange \\
+
+\end{schema}
 
 \subparagraph{Create a task:}
+
+\begin{schema}{SingleSubsystemOp}
+sn : SSNAME \\
+MultiSubsystemsChange \\
+\Delta AttachedSubsystem
+\where
+subs ~ sn = \theta AttachedSubsystem \\
+subs' ~ sn = \theta AttachedSubsystem'
+\end{schema}
+
+\begin{schema}{CreateTaskInMultiSs}
+task! : TASK \\
+MultiSubsystemsChange
+\where
+\forall sn : subNames @ \\
+\t1 \exists CreateTaskInAttachedCGH[ task / task! ] @ \\
+    \t2 SingleSubsystemOp \land \\
+    \t2 task = task!
+\end{schema}
+
+
 \subparagraph{Destroy a task:}
 \subparagraph{Move a task:}
 \subparagraph{Create a control group:}
