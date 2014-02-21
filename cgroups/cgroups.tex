@@ -37,7 +37,11 @@ specify precisely some (or all) of the features of \emph{Linux control groups} a
 \item \emph{hierarchy}---describe trees of $CGroup$s; (\textsc{Done})
 \item \emph{subsystem}---describe subsystems and attachment to hierarchies; (\textsc{Done} -- almost)
 \item \emph{RedHat rule 2}---make rule 2 into a constraint on subsystems+hierarchies;
-\item \emph{RedHat rules}---ensure all RedHat rules are represented correctly.
+\item \emph{RedHat rules}---ensure all RedHat rules are represented correctly;
+\item \emph{Linux API}---relate spec ops to mount (\emph{etc.});
+\item \emph{Move stuff to appendices};
+\item \emph{cross-reference experiments};
+\item \emph{extract improved cgroups description}.
 \end{itemize}
 
 % Alt-Cmd-M -- \emph{}
@@ -493,8 +497,9 @@ We first consider initialisation of an hierarchy. This is a sort of degenerate o
 
 \begin{schema}{InitCGHierarchy}
 CGHierarchy' \\
-\Xi Tasks
+systasks? : \finset TASK
 \where
+systasks' = systasks? \\
 \exists CGroup' @ \\
 ( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
 \land taskset' = systasks' ~~)
@@ -956,9 +961,13 @@ subNames' = subNames
 
 \begin{schema}{InitMultiSubsystems}
 MultiSubsystems' \\
+InitCGHierarchy \\
 subNames? : \finset SSNAME 
 \where
-subNames' = subNames?
+subNames' = subNames? \\
+\forall sn : subNames? @ \\
+\t1 \exists AttachedSubsystem' | subs' ~ sn = \theta AttachedSubsystem' @ \\
+    \t2 InitAttachedSubsystem
 \end{schema}
 
 
@@ -988,7 +997,7 @@ MultiSubsystemsChange \\
 
 \subparagraph{Create a task:}
 
-\begin{schema}{SingleSubsystemOp}
+\begin{schema}{SingleSubsystemChange}
 sn : SSNAME \\
 MultiSubsystemsChange \\
 \Delta AttachedSubsystem
@@ -998,13 +1007,12 @@ subs' ~ sn = \theta AttachedSubsystem'
 \end{schema}
 
 \begin{schema}{CreateTaskInMultiSs}
-task! : TASK \\
-MultiSubsystemsChange
+MultiSubsystemsChange \\
+parent?, task! : TASK
 \where
 \forall sn : subNames @ \\
-\t1 \exists CreateTaskInAttachedCGH[ task / task! ] @ \\
-    \t2 SingleSubsystemOp \land \\
-    \t2 task = task!
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 CreateTaskInAttachedCGH
 \end{schema}
 
 
