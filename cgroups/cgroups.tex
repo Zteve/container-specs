@@ -942,7 +942,7 @@ cgHierarchy == (\lambda AttachedSubsystem @ \theta CGHierarchy)
 
 
 \begin{schema}{MultiSubsystems}
-subNames : \finset SSNAME \\
+subNames : \finset_1 SSNAME \\
 subs : SSNAME \ffun AttachedSubsystem \\
 CGHierarchy
 \where
@@ -962,7 +962,7 @@ subNames' = subNames
 \begin{schema}{InitMultiSubsystems}
 MultiSubsystems' \\
 InitCGHierarchy \\
-subNames? : \finset SSNAME 
+subNames? : \finset_1 SSNAME 
 \where
 subNames' = subNames? \\
 \forall sn : subNames? @ \\
@@ -979,16 +979,6 @@ identified subsystem.
 
 These three groups of operations are lifted in different ways, reflecting the distinct effects they have on the 
 collection of named subsystems.
-
-\begin{schema}{MultiSsTaskOp}
-MultiSubsystemsChange \\
-task : TASK
-\end{schema}
-
-\begin{schema}{MultiSsCGHOp}
-MultiSubsystemsChange \\
-
-\end{schema}
 
 \begin{schema}{MultiSsResOp}
 MultiSubsystemsChange \\
@@ -1017,10 +1007,72 @@ parent?, task! : TASK
 
 
 \subparagraph{Destroy a task:}
+
+\begin{schema}{DestroyTaskInMultiSs}
+MultiSubsystemsChange \\
+task? : TASK
+\where
+\forall sn : subNames @ \\
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 DestroyTaskInAttachedCGH
+\end{schema}
+
+
 \subparagraph{Move a task:}
+
+\begin{schema}{MoveTaskInMultiSs}
+MultiSubsystemsChange \\
+dest? : CGPath \\
+task? : TASK
+\where
+\forall sn : subNames @ \\
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 MoveTaskInAttachedCGH
+\end{schema}
+
 \subparagraph{Create a control group:}
+
+\begin{schema}{CreateCGroupInMultiSs}
+MultiSubsystemsChange \\
+path? : CGPath
+\where
+\forall sn : subNames @ \\
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 CreateCGroupInAttachedCGH
+\end{schema}
+
 \subparagraph{Destroy a control group:}
+
+\begin{schema}{DestroyCGroupInMultiSs}
+MultiSubsystemsChange \\
+path? : CGPath
+\where
+\forall sn : subNames @ \\
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 DestroyCGroupInAttachedCGH
+\end{schema}
+
 \subparagraph{Add and remove resources:}
+
+\begin{schema}{AddResourcesInMultiSs}
+MultiSubsystemsChange \\
+rs? : ResourceSet \\
+cgp? : CGPath
+\where
+\forall sn : subNames @ \\
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 AddResourcesInAttachedSubsystem
+\end{schema}
+
+\begin{schema}{RemoveResourcesInMultiSs}
+MultiSubsystemsChange \\
+rs? : ResourceSet \\
+cgp? : CGPath
+\where
+\forall sn : subNames @ \\
+\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+    \t2 RemoveResourcesInAttachedSubsystem
+\end{schema}
 
 \clearpage
 
