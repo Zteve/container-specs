@@ -943,11 +943,11 @@ cgHierarchy == (\lambda AttachedSubsystem @ \theta CGHierarchy)
 \begin{schema}{MultiSubsystems}
 subNames : \finset_1 SSNAME \\
 subs : SSNAME \ffun AttachedSubsystem \\
-CGHierarchy
+commonCGH : CGHierarchy
 \where
 subNames = \dom subs \\
 \forall sn : subNames @ \\
-    \t1 cgHierarchy(subs ~ sn) = \theta CGHierarchy
+    \t1 cgHierarchy(subs ~ sn) = commonCGH
 \end{schema}
 
 \begin{schema}{MultiSubsystemsChange}
@@ -1053,25 +1053,24 @@ path? : CGPath
 
 \subparagraph{Add and remove resources:}
 
-\begin{schema}{AddResourcesInMultiSs}
+\begin{schema}{NamedSubsystemChange}
+sn? : SSNAME \\
 MultiSubsystemsChange \\
-rs? : ResourceSet \\
-cgp? : CGPath
+\Delta AttachedSubsystem
 \where
-\forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
-    \t2 AddResourcesInAttachedSubsystem
+subs ~ sn? = \theta AttachedSubsystem \\
+subs' ~ sn? = \theta AttachedSubsystem' \\
+\{ sn? \} \ndres subs = \{ sn? \} \ndres subs'
 \end{schema}
 
-\begin{schema}{RemoveResourcesInMultiSs}
-MultiSubsystemsChange \\
-rs? : ResourceSet \\
-cgp? : CGPath
-\where
-\forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
-    \t2 RemoveResourcesInAttachedSubsystem
-\end{schema}
+\begin{zed}
+AddResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
+    \t1 AddResourcesInAttachedSubsystem \land NamedSubsystemChange
+\also
+RemoveResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
+    \t1 RemoveResourcesInAttachedSubsystem \land NamedSubsystemChange
+\end{zed}
+
 
 \clearpage
 
