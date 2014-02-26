@@ -1,0 +1,136 @@
+
+
+Schema InitMultiSubsystems
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    systasks?: F TASK
+    subNames?: F SSNAME
+End
+
+The mount command creates a MultiSubsystems state, that is, it names and attaches subsystems to a newly created hierarchy.
+
+    mount -t cgroup <mountName> -o<$subNames?$> <h-path>
+
+The mountName is (virtually) ignored, the option is a non-empty list of subsystem names,
+and <h-path> is a location in a filesystem
+where the state of the multiple subsystems and the hierarchy are surfaced (see further API).
+(Where the state is actually stored is not
+clear.)
+
+Directories in the control group filesystem at <h-path> correspond to control groups, and each subsystem contributes
+(pseudo) files to those directories.
+
+Notice that if any filesystem is mounted on an existing mount point (<h-path> above) then the first `mount' is overwritten.
+A consequence of this is that subsystems may not be detached or attached to hierarchies that are already mounted.
+
+Schema CreateTaskInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    parent?: TASK
+    task!: TASK
+End
+
+Tasks created by any process automatically cause this operation to occur for all attached subsystems.
+task! is the task created, and parent? is the task's parent task.
+As the subsystem state changes so the
+filesystem rooted in <h-path> is updated.
+
+Schema DestroyTaskInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    task?: TASK
+End
+
+When a task dies and the system decides it has been destroyed then this operation occurs.
+task? is the task about to die.
+As the subsystem state changes so the
+filesystem rooted in <h-path> is updated.
+
+
+Schema MoveTaskInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    task?: TASK
+    dest?: CGPath
+End
+
+This is an operation explicitly initiated by a control group action.
+The process id (pid) of the task is written into a (pseudo) file in the cgroup filesystem (at <h-path>),
+in a directory corresponding to the destination cgroup (dest?).
+Whether or not resources move with the task is determined by subsystem settings, and is not
+proscribed by our abstract operation.
+
+
+Schema CreateCGroupInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    path?: CGPath
+End
+
+A control group is created when a new directory is created (with mkdir) in the cgroup filesystem.
+path? is the relative path of the directory from the <h-path> root.
+Each subsystem automatically contributes
+(pseudo) files to the new directory. There are no tasks associated with the new control group.
+
+Schema DestroyCGroupInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    path?: CGPath
+End
+
+A control group is deleted when its directory is removed (with rmdir, or equivalent) from the cgroup filesystem.
+Before this will succeed, there must be no tasks and no resources associated with that control group,
+and there must be no subdirectories in the directory.
+
+A consequence of these restrictions means that the root control group can never be deleted by this operation.
+
+Schema AddResourcesInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    rs?: ResourceSet
+    cgp?: CGPath
+    sn?: SSNAME
+End
+
+
+Schema RemoveResourcesInMultiSs
+    subNames: F SSNAME
+    subs: SSNAME -++> AttachedSubsystem
+    commonCGH: CGHierarchy
+    subNames': F SSNAME
+    subs': SSNAME -++> AttachedSubsystem
+    commonCGH': CGHierarchy
+    rs?: ResourceSet
+    cgp?: CGPath
+    sn?: SSNAME
+End
+
+These operations try to describe only the most basic features of subsystems' resource management.
+They are limited to one subsystem's resources in one control group.
+These operations are instigated by a subsystem as a result of some system state change rather than an explicit command.
+
