@@ -819,6 +819,7 @@ constraints easily enough.
 In each case the hierarchy changes are already stipulated, we only have to say what happens to the subsystem that is
 tracking it.
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Create a task:}
 We have to explain what parts of the subsystem may change when a new task is created:
 
@@ -840,6 +841,7 @@ what its parent might require. In general, then, we might add resources into the
 Note that it is possible for the $pinned$ set to increase but only by the addition of the single control group 
 named $cgp$.
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a task:}
 We have to explain what parts of the subsystem may change when a task is destroyed:
 
@@ -856,6 +858,7 @@ on this one the resource set usage may \emph{decrease} (but it cannot increase).
 
 Here the $pinned$ set might reduce by one control group, but only one.
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Move a task:}
 We have to explain what parts of the subsystem may change when a task is moved from one control group to another.
 
@@ -880,6 +883,7 @@ subsystems might be able to say more about this.
 Again it is instructive to consider what happens if the source and destination are the same control group. The specification implies that this is a no-op: the resources used are unchanging. It remains to be seen if this is the case,
 but we would be surprised if it wasn't.  It is nice to see this falling out of a general description.
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Create a control group:}
 We have to explain what parts of the subsystem may change when a new control group is created:
 
@@ -894,6 +898,7 @@ The new control group uses no resources (and has no tasks you may recall from $C
 for all the other control groups remain the same. Notice how the $\Delta AttachedSubsystem$ constraints save us
 from having to say stuff like `no other control groups magically appear'.
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a control group:}
 We have to explain what parts of the subsystem may change when a control group is destroyed:
 
@@ -930,16 +935,23 @@ RemoveResourcesInAttachedSubsystem \defs \\
 \end{zed}
 where $\Xi CGHierarchy$ documents that the hierarchy remains unchanged.
 
+%=============================================================================
 \section{Many subsystems}
 
+The aim of this section is to move away from considering just one subsystem and its affect upon
+a control group hierarchy, to the more general case where two or more subsystems are attached
+to the same hierarchy.
 
-\subsection{Many subsystems operations}
-
+We model this as a collection of $AttachedSubsystem$s, where the hierarchies are identical.
+A function which extracts just the control group hierarchy from an $AttachedSubsystem$ is then useful:
 \begin{zed}
 cgHierarchy == (\lambda AttachedSubsystem @ \theta CGHierarchy) 
 \end{zed}
+and we can use this  function to ensure that the hierarchies spoken of in the $AttachedSubsystem$
+collection are all the same.
 
-
+Multiple subsystems attached to the same hierarchy consists of a set of subsystem names, a map from this set
+to $AttachedSubsystem$s, and the control group hierarchy which is common to them all.
 \begin{schema}{MultiSubsystems}
 subNames : \finset_1 SSNAME \\
 subs : SSNAME \ffun AttachedSubsystem \\
@@ -949,44 +961,63 @@ subNames = \dom subs \\
 \forall sn : subNames @ \\
     \t1 cgHierarchy(subs ~ sn) = commonCGH
 \end{schema}
+The domain of the map is exactly the set of subsystem names, and every named subsystem's 
+control group hierarchy is identical to the top-level one.
+
+There are two points to be made: the set of subsystem names ($subNames$) is \emph{non-empty}, ensuring at least
+one $AttachedSubsystem$ exists; and the common hierarchy is really only there to tie them together, but
+we will see advantages to giving it a separate, subsystem-independent name later.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{Many subsystems operations}
+
+Previously we have used $\Delta$ to indicate the before and after states of a schema, but in this case we want to 
+impose an additional constraint on all of our operations. After a $MultiSubsystem$ is created we want to insist that
+the set of subsystems remains fixed. This reflects reality where the act of \texttt{mount}ing the subsystems creates the
+hierarchy at the same time, and there is no API for partially \emph{un}mounting a subsystem, or adding one to an existing mount point.
+
+We will define what is allowed to change for every $MultiSubsystems$ operation:
 
 \begin{schema}{MultiSubsystemsChange}
 \Delta MultiSubsystems
 \where
 subNames' = subNames
 \end{schema}
+Every operation leaves the named subsystems unchanged.
 
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Initialisation}
 
+Since the $subNames$ cannot change, when are they initialised? When the first $MultiSubsystems$ state is created:
+
 \begin{schema}{InitMultiSubsystems}
+subNames? : \finset_1 SSNAME \\
+systasks? : \finset TASK \\
 MultiSubsystems' \\
-InitCGHierarchy \\
-subNames? : \finset_1 SSNAME 
 \where
 subNames' = subNames? \\
 \forall sn : subNames? @ \\
 \t1 \exists AttachedSubsystem' | subs' ~ sn = \theta AttachedSubsystem' @ \\
     \t2 InitAttachedSubsystem
 \end{schema}
+We need to supply the subsystems names (at least one of them), and the system tasks currently
+extant, and the attached subsystems are each
+initialised appropriately. The $MultiSubsystems'$ constraints imply that the hierarchies match.
 
-
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Lifting attached subsystem operations}
 
 The operations to be lifted are: create,  destroy and move a task;
 create and destroy a control group; and add and remove resources, which should act on an 
 identified subsystem.
 
-These three groups of operations are lifted in different ways, reflecting the distinct effects they have on the 
-collection of named subsystems.
+These groups of operations are lifted in two different ways, reflecting the fact that four of them
+affect all the subsystems, and two of them (the resource ones) affect only one subsystem.
 
-\begin{schema}{MultiSsResOp}
-MultiSubsystemsChange \\
-
-\end{schema}
-
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Create a task:}
 
-\begin{schema}{SingleSubsystemChange}
+\begin{schema}{OneSubsystemChange}
 sn : SSNAME \\
 MultiSubsystemsChange \\
 \Delta AttachedSubsystem
@@ -1000,11 +1031,11 @@ MultiSubsystemsChange \\
 parent?, task! : TASK
 \where
 \forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+\t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 CreateTaskInAttachedCGH
 \end{schema}
 
-
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a task:}
 
 \begin{schema}{DestroyTaskInMultiSs}
@@ -1012,11 +1043,12 @@ MultiSubsystemsChange \\
 task? : TASK
 \where
 \forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+\t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 DestroyTaskInAttachedCGH
 \end{schema}
 
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Move a task:}
 
 \begin{schema}{MoveTaskInMultiSs}
@@ -1025,10 +1057,11 @@ dest? : CGPath \\
 task? : TASK
 \where
 \forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+\t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 MoveTaskInAttachedCGH
 \end{schema}
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Create a control group:}
 
 \begin{schema}{CreateCGroupInMultiSs}
@@ -1036,10 +1069,11 @@ MultiSubsystemsChange \\
 path? : CGPath
 \where
 \forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+\t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 CreateCGroupInAttachedCGH
 \end{schema}
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a control group:}
 
 \begin{schema}{DestroyCGroupInMultiSs}
@@ -1047,28 +1081,25 @@ MultiSubsystemsChange \\
 path? : CGPath
 \where
 \forall sn : subNames @ \\
-\t1 \exists \Delta AttachedSubsystem | SingleSubsystemChange @ \\
+\t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 DestroyCGroupInAttachedCGH
 \end{schema}
 
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Add and remove resources:}
 
-\begin{schema}{NamedSubsystemChange}
-sn? : SSNAME \\
-MultiSubsystemsChange \\
-\Delta AttachedSubsystem
+\begin{schema}{OnlySubsystemChange}
+OneSubsystemChange[ sn? / sn ] \\
 \where
-subs ~ sn? = \theta AttachedSubsystem \\
-subs' ~ sn? = \theta AttachedSubsystem' \\
-\{ sn? \} \ndres subs = \{ sn? \} \ndres subs'
+\{ sn? \} \ndres subs = \{ sn? \} \ndres subs' \\
 \end{schema}
 
 \begin{zed}
 AddResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
-    \t1 AddResourcesInAttachedSubsystem \land NamedSubsystemChange
+    \t1 AddResourcesInAttachedSubsystem \land OnlySubsystemChange
 \also
 RemoveResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
-    \t1 RemoveResourcesInAttachedSubsystem \land NamedSubsystemChange
+    \t1 RemoveResourcesInAttachedSubsystem \land OnlySubsystemChange
 \end{zed}
 
 
