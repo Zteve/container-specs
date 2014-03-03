@@ -2,7 +2,7 @@
 \usepackage{zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.5}
+\markboth{Draft}{Version 0.6}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -36,11 +36,11 @@ specify precisely some (or all) of the features of \emph{Linux control groups} a
 \item \emph{ops}---describe more operations (e.g. on $CGroupsTasks$); (\textsc{Done})
 \item \emph{hierarchy}---describe trees of $CGroup$s; (\textsc{Done})
 \item \emph{subsystem}---describe subsystems and attachment to hierarchies; (\textsc{Done})
-\item \emph{Linux API}---relate spec ops to mount (\emph{etc.});
 \item \emph{Move stuff to appendices};
+\item \emph{Linux API}---relate spec ops to mount (\emph{etc.});
 \item \emph{cross-reference experiments};
 \item \emph{extract improved cgroups description}---derive patch to external docs.
-\item \emph{Red Hat rules}---discuss all four Red Hat rules and add refs to spec (quotations);
+\item \emph{Red Hat rules}---discuss all four Red Hat rules and add refs to spec (quotations) (\textsc{Dropped});
 \end{itemize}
 
 % Alt-Cmd-M -- \emph{}
@@ -1012,11 +1012,9 @@ create and destroy a control group; and add and remove resources, which should a
 identified subsystem.
 
 These groups of operations are lifted in two different ways, reflecting the fact that four of them
-affect all the subsystems, and two of them (the resource ones) affect only one subsystem.
+affect \emph{all} the subsystems, and two of them (the resource ones) affect only \emph{one} subsystem.
 
-% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
-\subparagraph{Create a task:}
-
+The first way is where all the subsystem change together. We describe what one among many changes might look like:
 \begin{schema}{OneSubsystemChange}
 sn : SSNAME \\
 MultiSubsystemsChange \\
@@ -1025,6 +1023,25 @@ MultiSubsystemsChange \\
 subs ~ sn = \theta AttachedSubsystem \\
 subs' ~ sn = \theta AttachedSubsystem'
 \end{schema}
+crucially, we do not insist here that all the other subsystems remain fixed (which is what a `point operation' promotion would do).
+
+The second way is when we wish to insist that \emph{only} one subsystem is changed (normally the subsystem name is input).
+
+We augment
+$OneSubsystemChange$ to say this:
+\begin{schema}{OnlySubsystemChange}
+OneSubsystemChange[ sn? / sn ] \\
+\where
+\{ sn? \} \ndres subs = \{ sn? \} \ndres subs' \\
+\end{schema}
+which adds the further restriction that all the other subsystems remain the same in this case.
+
+We use these two types of `lifting' for our lifted operations.
+
+% .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
+\subparagraph{Create a task:}
+
+When a new task is created all attached subsystems change simultaneously. We expose the output $task!$ and the input $parent?$ as usual:
 
 \begin{schema}{CreateTaskInMultiSs}
 MultiSubsystemsChange \\
@@ -1034,10 +1051,16 @@ parent?, task! : TASK
 \t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 CreateTaskInAttachedCGH
 \end{schema}
+Each attached subsystem in $subs$ changes as described in $CreateTaskInAttachedCGH$.
+
+Notice that all the inputs and outputs to the individual operations are identical and that the hierarchies (all being identical)
+can only change in the same way---however, the resources may change in different ways for the different subsystems as permitted by
+$CreateTaskInAttachedCGH$.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a task:}
 
+When a task is destroyed all attached subsystems change simultaneously. We expose the input $task?$ as usual:
 \begin{schema}{DestroyTaskInMultiSs}
 MultiSubsystemsChange \\
 task? : TASK
@@ -1046,11 +1069,14 @@ task? : TASK
 \t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 DestroyTaskInAttachedCGH
 \end{schema}
+Each attached subsystem changes as described in $DestroyTaskInAttachedCGH$.
 
+Here the resources are depleted in each subsystem, but the resources involved in each subsystem need not be the same.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Move a task:}
 
+Moving a task to a control group operates in a similar way.  We expose the inputs dest? and task? as before:
 \begin{schema}{MoveTaskInMultiSs}
 MultiSubsystemsChange \\
 dest? : CGPath \\
@@ -1060,9 +1086,12 @@ task? : TASK
 \t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 MoveTaskInAttachedCGH
 \end{schema}
+Each attached subsystem manages the move in the same way, but may involve quite different resources in each case.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Create a control group:}
+
+A new control group is created in each attached subsystem in the same way:
 
 \begin{schema}{CreateCGroupInMultiSs}
 MultiSubsystemsChange \\
@@ -1072,9 +1101,12 @@ path? : CGPath
 \t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 CreateCGroupInAttachedCGH
 \end{schema}
+Each attached subsystem creates the new control group ($path?$) with no resources.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a control group:}
+
+A control group is removed from each attached subsystem:
 
 \begin{schema}{DestroyCGroupInMultiSs}
 MultiSubsystemsChange \\
@@ -1084,15 +1116,15 @@ path? : CGPath
 \t1 \exists \Delta AttachedSubsystem | OneSubsystemChange @ \\
     \t2 DestroyCGroupInAttachedCGH
 \end{schema}
+Each attached subsystem destroys a control group in the same way.
+
+Notice that \emph{every} subsystem must satisfy the constraints for this operation to apply.
+Any resource for this control group \emph{in any subsystem} will prevent this.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Add and remove resources:}
 
-\begin{schema}{OnlySubsystemChange}
-OneSubsystemChange[ sn? / sn ] \\
-\where
-\{ sn? \} \ndres subs = \{ sn? \} \ndres subs' \\
-\end{schema}
+Adding and removing resources applies to \emph{only} one subsystem.
 
 \begin{zed}
 AddResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
@@ -1101,7 +1133,10 @@ AddResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
 RemoveResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
     \t1 RemoveResourcesInAttachedSubsystem \land OnlySubsystemChange
 \end{zed}
+Here we use standard pointwise lifting. 
 
+The subsystem name input ($sn?$) appears in $OnlySubsystemChange$
+and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
 
 \clearpage
 
