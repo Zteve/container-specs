@@ -1,6 +1,6 @@
 \section{Z Notation}
 \label{cha:znot}
-
+{\scriptsize
 \makeatletter % the following code is taken from Mike Spivey's zed.tex
 
 \def\symtab{\setbox0=\vbox\bgroup \def\\{\cr}
@@ -9,15 +9,15 @@
         \dimen0=\ht0 \divide\dimen0 by2 \advance\dimen0 by\ht\strutbox
         \splittopskip=\ht\strutbox \vbadness=10000
         \predisplaypenalty=0
-        $$\halign{##\cr\hbox to\linewidth{% 
+        $$\halign{##\cr\hbox to\linewidth{%
                 \valign{##\vfil\cr
-                        \setbox1=\vsplit0 to\dimen0 \unvbox1\cr 
+                        \setbox1=\vsplit0 to\dimen0 \unvbox1\cr
                         \noalign{\hfil}\unvbox0\cr
-                        \noalign{\hfil}}}\cr 
+                        \noalign{\hfil}}}\cr
                 \noalign{\prevdepth=\dp\strutbox}}$$
         \global\@ignoretrue}
 
-\makeatother 
+\makeatother
 
 Numbers:
 \begin{symtab}
@@ -146,3 +146,5 @@ Schema definitions:
 \where
   Predicates
 \end{schema}
+}
+\newpage

@@ -1,8 +1,8 @@
 \documentclass[a4paper,twoside,12pt]{article}
-\usepackage{zed-cm}
+\usepackage{../z/zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.6}
+\markboth{Draft}{Version 0.7 restructure doc}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -10,7 +10,7 @@
 
 \def\Slash{\slash\hspace{0pt}}
 
-\title{A Model of Linux Control Groups and Subsystems}
+\title{An Abstract Model of Linux Control Groups and Subsystems}
 
 \author{
 Glyn Normington\and
@@ -27,20 +27,15 @@ Steve Powell
 
 %=============================================================================
 
-This is a working document which serves to record the justifications, deliberations and results\footnote{but 
-not, alas, the mistakes} of an attempt to
-specify precisely some (or all) of the features of \emph{Linux control groups} and \emph{subsystems} which can support robust and reliable development of \emph{Warden} and related products.
+This document specifies precisely some of the features of \emph{Linux control groups} and \emph{subsystems} to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
 
 \paragraph{Current ``to-do'' list:}
 \begin{itemize}
-\item \emph{ops}---describe more operations (e.g. on $CGroupsTasks$); (\textsc{Done})
-\item \emph{hierarchy}---describe trees of $CGroup$s; (\textsc{Done})
-\item \emph{subsystem}---describe subsystems and attachment to hierarchies; (\textsc{Done})
-\item \emph{Move stuff to appendices};
+\item (\textsc{Done}) \emph{Move stuff to appendices};
 \item \emph{Linux API}---relate spec ops to mount (\emph{etc.});
-\item \emph{cross-reference experiments};
 \item \emph{extract improved cgroups description}---derive patch to external docs.
-\item \emph{Red Hat rules}---discuss all four Red Hat rules and add refs to spec (quotations) (\textsc{Dropped});
+\item (\textsc{Dropped}) \emph{cross-reference experiments};
+\item (\textsc{Dropped}) \emph{Red Hat rules}---discuss  Red Hat rules (with quotations).
 \end{itemize}
 
 % Alt-Cmd-M -- \emph{}
@@ -64,198 +59,21 @@ specify precisely some (or all) of the features of \emph{Linux control groups} a
 %=============================================================================
 \section{Introduction}
 
-In order to implement some features and improvements to \emph{Warden} we intend to sharpen our understanding of Linux control groups and simultaneously document their use.
+In order to implement some features and improvements to \emph{Warden} we sharpen our understanding of Linux control groups 
+and simultaneously document their use by presenting an abstract model in Z\footnote{See appendix \ref{cha:znot} for a one-page summary of the Z notation.}.
 
-Linux control groups are part of the basis for the current implementation of Warden as well as of Linux Containers (LXC), Docker, and Google's
-\textit{lmctfy} (``let me contain that for you'') project and so are important to the industry as well as to Cloud
+Linux control groups are part of the basis for the current implementation of Warden\cite{warden}\footnote{All references are listed in appendix \ref{sec:references}.} and Garden\cite{garden} as well as of Linux Containers (LXC), Docker, and Google's
+\textit{lmctfy} (``let me contain that for you'') project and so are important to the industry at large as well as to Cloud
 Foundry.
 
-In the process we intend to use our improved understanding to benefit:
+We intend to use our improved understanding to benefit:
 \begin{itemize}
 \item Linux Kernel documentation;
 \item Warden \cite{warden} and Garden \cite{garden} development and exploitation; and
 \item the wider development audience.
 \end{itemize}
-In particular, a clearer understanding of Warden/Garden and their basis in Linux control groups will put their development 
-on a much firmer footing and enable key abstractions to be introduced which will provide a much-needed, stable structure upon which
-functional enhancements and the likely future evolution of Linux control groups can rest.
 
-These are the deliverables we plan:
 
-\begin{itemize}
-\item \emph{CGroupSpec}: a precise Z specification for control groups, and (at least) the \texttt{memory} subsystem, states;
-\item an improved introduction (for Z0L readers\footnote{\emph{Z0L} refers to people who do not speak Z; Z is their \emph{zero}th language.}) of control groups, etc.;
-\item \emph{WardenSpec}: a precise Z specification for a Warden API, using some or all of the \emph{CGroupSpec} state;
-\item an english version of the same (for Z0L readers);
-\item an implementation framework that maps \emph{WardenSpec} to \emph{CGroupSpec}; and
-\item proposals for future development of Warden functionality by reference to these specs.
-\end{itemize}
-As input to this work we access the following sources of information:
-\begin{description}
-\item[Kernel specs] the english descriptions of control groups in the Kernel literature \cite{linuxgroups};
-\item[Kernel code] the Linux Kernel \cite{linuxkernel};
-\item[experiments] tests run against the CGroups kernel code (on a shared VM);
-\item[RedHat article] an article about CGroups written by RedHat which provides some invariants of the pseudo-filesystem state \cite{rharticle}.
-\item[Linux kernel mailing list] \cite{noop} where we asked questions and got informative and timely answers.
-\end{description}
-
-%----------------------------------------------------------------------------------------------------
-\subsection{The Linux specification \cite{linuxgroups}}
-
-In order to kick off the discussion (and to show what we're up against) we include the first section of \cite{linuxgroups} here:
-
-{\small \begin{verbatim}
-1.1 What are cgroups ?
-----------------------
-
-Control Groups provide a mechanism for aggregating/partitioning sets
-of tasks, and all their future children, into hierarchical groups with
-specialized behaviour.
-
-Definitions:
-
-A *cgroup* associates a set of tasks with a set of parameters for one
-or more subsystems.
-
-A *subsystem* is a module that makes use of the task grouping
-facilities provided by cgroups to treat groups of tasks in
-particular ways. A subsystem is typically a "resource controller" that
-schedules a resource or applies per-cgroup limits, but it may be
-anything that wants to act on a group of processes, e.g. a
-virtualization subsystem.
-
-A *hierarchy* is a set of cgroups arranged in a tree, such that
-every task in the system is in exactly one of the cgroups in the
-hierarchy, and a set of subsystems; each subsystem has system-specific
-state attached to each cgroup in the hierarchy.  Each hierarchy has
-an instance of the cgroup virtual filesystem associated with it.
-
-At any one time there may be multiple active hierarchies of task
-cgroups. Each hierarchy is a partition of all tasks in the system.
-
-User-level code may create and destroy cgroups by name in an
-instance of the cgroup virtual file system, specify and query to
-which cgroup a task is assigned, and list the task PIDs assigned to
-a cgroup. Those creations and assignments only affect the hierarchy
-associated with that instance of the cgroup file system.
-
-On their own, the only use for cgroups is for simple job
-tracking. The intention is that other subsystems hook into the
-generic cgroup support to provide new attributes for cgroups, such
-as accounting/limiting the resources which processes in a cgroup can
-access. For example, cpusets (see Documentation/cgroups/cpusets.txt)
-allow you to associate a set of CPUs and a set of memory nodes with
-the tasks in each cgroup.
-\end{verbatim}}
-Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it is
-full of specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; and it is no worse---and in many ways better---than many such.} (see \cite{7sins}). For example, it is ambiguous concerning the number of and relationship between hierarchies; it
-doesn't explain what the initial state of a control group is; it talks about tasks and processes as though they were the same without comment (we think they are the same, but we're not sure); the rules about the relationship between tasks and control groups sound contradictory; and so on.
-
-We very much hope to address these puzzles (and more) in the following sections.
-
-%=============================================================================
-\section{Notes}
-
-We gather here some observations, experiments and discussions which have informed our bit of research. This section may not survive the life of this specification, but we find it useful to try and document what we learn \emph{as we learn it}.
-
-%----------------------------------------------------------------------------------------------------
-\subsection{Mailing lists discussions}
-
-It does not seem possible to define a \texttt{cgroup} hierarchy with no subsystems attached to it.
-See the discussion \cite{noop}.
-
-%----------------------------------------------------------------------------------------------------
-\subsection{Experiments}
-\label{sec:experiments}
-We performed some simple experiments on a (virtual, and hence infinitely refreshable) Linux machine.
-
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Multiple subsystems}
-
-Attaching multiple subsystems to a single hierarchy:
-{\small \begin{verbatim}
-# cd /tmp/warden/cgroup
-# mkdir test
-# mount -t cgroup -o 'cpuset,blkio' none /tmp/warden/cgroup/test
-# cd test
-# mkdir parent
-# cd parent
-# echo 0 > cpuset.mems 
-# echo 0 > cpuset.cpus
-# echo $$ > tasks
-# cat tasks
-1840
-2014
-# cat /proc/1840/cgroup
-13:blkio,cpuset:/parent
-4:memory:/parent/child
-3:devices:/
-2:cpuacct:/
-1:cpu:/
-# cat /proc/cgroups
-#subsys_name	hierarchy	num_cgroups	enabled
-cpuset	13	2	1
-cpu	1	1	1
-cpuacct	2	1	1
-memory	4	3	1
-devices	3	1	1
-freezer	0	1	1
-blkio	13	2	1
-perf_event	0	1	1
-# cat /proc/mounts 
-...
-none /tmp/warden/cgroup tmpfs rw,relatime 0 0
-none /tmp/warden/cgroup/cpu cgroup rw,relatime,cpu 0 0
-none /tmp/warden/cgroup/cpuacct cgroup rw,relatime,cpuacct 0 0
-none /tmp/warden/cgroup/devices cgroup rw,relatime,devices 0 0
-none /tmp/warden/cgroup/memory cgroup rw,relatime,memory 0 0
-none /tmp/warden/cgroup/test cgroup rw,relatime,blkio,cpuset 0 0
-\end{verbatim}}
-
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Multiple hierarchies}
-
-Attaching a single subsystem to multiple hierarchies:
-{\small \begin{verbatim}
-$ pwd   
-/home/vagrant
-$ mkdir mem1
-$ mkdir mem2
-$ sudo su
-# mount -t cgroup -o memory none /home/vagrant/mem1
-# mount -t cgroup -o memory none /home/vagrant/mem2
-# cd mem1
-# mkdir inst1  
-# ls inst1 
-cgroup.clone_children  memory.failcnt ...
-# ls ../mem2
-cgroup.clone_children  inst1 memory.limit_in_bytes ...
-# cd inst1
-# echo 1000000 > memory.limit_in_bytes 
-# cat memory.limit_in_bytes 
-1003520
-# cat ../../mem2/inst1/memory.limit_in_bytes 
-1003520
-# echo $$ > tasks
-# cat tasks
-1365
-1409
-# cat ../../mem2/inst1/tasks
-1365
-1411
-\end{verbatim}}
-
-% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Overlapping hierarchies}
-
-Attaching a new subsystem to one of the hierarchies attached to an existing subsystem (this follows on from the previous experiment):
-{\small \begin{verbatim}
-# mount -t cgroup -o cpuset none /home/vagrant/mem1
-# ls /home/vagrant/mem1
-cpuset.cpus ... // No memory.* files!
-# ls /home/vagrant/mem2
-cgroup.clone_children  inst1 memory.limit_in_bytes ...
-\end{verbatim}}
 
 %=============================================================================
 \section{Fundamentals}
@@ -1140,10 +958,203 @@ and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
 
 \clearpage
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
 
+%=============================================================================
+%   Z   N O T A T I O N
+%=============================================================================
+\input{../z/z-notation.tex}
+
+
+%=============================================================================
+%   S O U R C E S 
+%=============================================================================
+\section{Sources}
+\label{sec:sources}
+
+As input to this work we accessed the following sources of information:
+\begin{description}
+\item[Kernel specs] descriptions of control groups in the Kernel literature \cite{linuxgroups};
+\item[Kernel code] the Linux Kernel \cite{linuxkernel};
+\item[experiments] tests run against the \texttt{cgroups} kernel code (see appendix \ref{sec:notes});
+\item[RedHat article] \cite{rharticle} which provides ``invariants'' of the filesystem;
+\item[Linux kernel mailing list] \cite{noop} for informative and timely Q and A.
+\end{description}
+
+%----------------------------------------------------------------------------------------------------
+\subsection{The Linux specification \cite{linuxgroups}}
+
+Here is the first section of \cite{linuxgroups}:
+
+{\scriptsize \begin{verbatim}
+1.1 What are cgroups ?
+----------------------
+
+Control Groups provide a mechanism for aggregating/partitioning sets
+of tasks, and all their future children, into hierarchical groups with
+specialized behaviour.
+
+Definitions:
+
+A *cgroup* associates a set of tasks with a set of parameters for one
+or more subsystems.
+
+A *subsystem* is a module that makes use of the task grouping
+facilities provided by cgroups to treat groups of tasks in
+particular ways. A subsystem is typically a "resource controller" that
+schedules a resource or applies per-cgroup limits, but it may be
+anything that wants to act on a group of processes, e.g. a
+virtualization subsystem.
+
+A *hierarchy* is a set of cgroups arranged in a tree, such that
+every task in the system is in exactly one of the cgroups in the
+hierarchy, and a set of subsystems; each subsystem has system-specific
+state attached to each cgroup in the hierarchy.  Each hierarchy has
+an instance of the cgroup virtual filesystem associated with it.
+
+At any one time there may be multiple active hierarchies of task
+cgroups. Each hierarchy is a partition of all tasks in the system.
+
+User-level code may create and destroy cgroups by name in an
+instance of the cgroup virtual file system, specify and query to
+which cgroup a task is assigned, and list the task PIDs assigned to
+a cgroup. Those creations and assignments only affect the hierarchy
+associated with that instance of the cgroup file system.
+
+On their own, the only use for cgroups is for simple job
+tracking. The intention is that other subsystems hook into the
+generic cgroup support to provide new attributes for cgroups, such
+as accounting/limiting the resources which processes in a cgroup can
+access. For example, cpusets (see Documentation/cgroups/cpusets.txt)
+allow you to associate a set of CPUs and a set of memory nodes with
+the tasks in each cgroup.
+\end{verbatim}}
+
+Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it commits some
+specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; 
+it is no worse---and in many ways better---than many such.} (see \cite{7sins}). 
+For example, it is ambiguous concerning the number of and relationship between hierarchies; it
+doesn't explain what the initial state of a control group is; it talks about tasks and processes as though they were the same without comment (we think they are the same); 
+the rules about the relationship between tasks and control groups sound contradictory; and so on.
+
+
+%=============================================================================
+%   N O  T E S
+%=============================================================================
+\section{Notes and experiments}
+\label{sec:notes}
+
+We gather here some observations, experiments and discussions which have informed our research. 
+
+%----------------------------------------------------------------------------------------------------
+\subsection{Mailing lists discussions}
+
+It does not seem possible to define a \texttt{cgroup} hierarchy with no subsystems attached to it.
+See the discussion \cite{noop}.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{Experiments}
+\label{sec:experiments}
+We performed some simple experiments on a (virtual, and hence infinitely refreshable) Linux machine.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Multiple subsystems}
+
+Attaching multiple subsystems to a single hierarchy:
+{\scriptsize \begin{verbatim}
+# cd /tmp/warden/cgroup
+# mkdir test
+# mount -t cgroup -o 'cpuset,blkio' none /tmp/warden/cgroup/test
+# cd test
+# mkdir parent
+# cd parent
+# echo 0 > cpuset.mems 
+# echo 0 > cpuset.cpus
+# echo $$ > tasks
+# cat tasks
+1840
+2014
+# cat /proc/1840/cgroup
+13:blkio,cpuset:/parent
+4:memory:/parent/child
+3:devices:/
+2:cpuacct:/
+1:cpu:/
+# cat /proc/cgroups
+#subsys_name	hierarchy	num_cgroups	enabled
+cpuset	13	2	1
+cpu	1	1	1
+cpuacct	2	1	1
+memory	4	3	1
+devices	3	1	1
+freezer	0	1	1
+blkio	13	2	1
+perf_event	0	1	1
+# cat /proc/mounts 
+...
+none /tmp/warden/cgroup tmpfs rw,relatime 0 0
+none /tmp/warden/cgroup/cpu cgroup rw,relatime,cpu 0 0
+none /tmp/warden/cgroup/cpuacct cgroup rw,relatime,cpuacct 0 0
+none /tmp/warden/cgroup/devices cgroup rw,relatime,devices 0 0
+none /tmp/warden/cgroup/memory cgroup rw,relatime,memory 0 0
+none /tmp/warden/cgroup/test cgroup rw,relatime,blkio,cpuset 0 0
+\end{verbatim}}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Multiple hierarchies}
+
+Attaching a single subsystem to multiple hierarchies:
+{\scriptsize \begin{verbatim}
+$ pwd   
+/home/vagrant
+$ mkdir mem1
+$ mkdir mem2
+$ sudo su
+# mount -t cgroup -o memory none /home/vagrant/mem1
+# mount -t cgroup -o memory none /home/vagrant/mem2
+# cd mem1
+# mkdir inst1  
+# ls inst1 
+cgroup.clone_children  memory.failcnt ...
+# ls ../mem2
+cgroup.clone_children  inst1 memory.limit_in_bytes ...
+# cd inst1
+# echo 1000000 > memory.limit_in_bytes 
+# cat memory.limit_in_bytes 
+1003520
+# cat ../../mem2/inst1/memory.limit_in_bytes 
+1003520
+# echo $$ > tasks
+# cat tasks
+1365
+1409
+# cat ../../mem2/inst1/tasks
+1365
+1411
+\end{verbatim}}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\subsubsection{Overlapping hierarchies}
+
+Attaching a new subsystem to one of the hierarchies attached to an existing subsystem (this follows on from the previous experiment):
+{\scriptsize \begin{verbatim}
+# mount -t cgroup -o cpuset none /home/vagrant/mem1
+# ls /home/vagrant/mem1
+cpuset.cpus ... // No memory.* files!
+# ls /home/vagrant/mem2
+cgroup.clone_children  inst1 memory.limit_in_bytes ...
+\end{verbatim}}
+
+
+
+%=============================================================================
+%   B I B L I O G R A P H Y
+%=============================================================================
+\newpage
 \begin{flushleft}
-\begin{thebibliography}{99}   
+\begin{thebibliography}{99}
+\label{sec:references}  
 % `99' is a picture of the generated numeric references -- they are two digits in this bibliography 
 % If we had a hundred or more we would have used 999, or whatever.
 
