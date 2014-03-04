@@ -1,0 +1,148 @@
+\section{Z Notation}
+\label{cha:znot}
+
+\makeatletter % the following code is taken from Mike Spivey's zed.tex
+
+\def\symtab{\setbox0=\vbox\bgroup \def\\{\cr}
+        \halign\bgroup\strut$##$\hfil&\quad##\hfil\cr}
+\def\endsymtab{\crcr\egroup\egroup
+        \dimen0=\ht0 \divide\dimen0 by2 \advance\dimen0 by\ht\strutbox
+        \splittopskip=\ht\strutbox \vbadness=10000
+        \predisplaypenalty=0
+        $$\halign{##\cr\hbox to\linewidth{% 
+                \valign{##\vfil\cr
+                        \setbox1=\vsplit0 to\dimen0 \unvbox1\cr 
+                        \noalign{\hfil}\unvbox0\cr
+                        \noalign{\hfil}}}\cr 
+                \noalign{\prevdepth=\dp\strutbox}}$$
+        \global\@ignoretrue}
+
+\makeatother 
+
+Numbers:
+\begin{symtab}
+        \nat & \verb/Natural numbers/ \{\verb/0,1,.../\} \\
+%       \num & \verb/Integers (...,-1,0,1,...)/ \\
+%       \nat_1 & \verb/Positive natural numbers/ \\
+%       \upto & \verb/integral range/ \\
+%       + & \verb/Addition/\quad\hfill 3 \\
+%       - & \verb/Subtraction/\quad\hfill 3 \\
+%       * & \verb/Multiply/\quad\hfill 4 \\
+%       \div & \verb/Remainder/\quad\hfill 4 \\
+%       \mod & \verb/Modulus/\quad\hfill 4 \\
+%       < & \verb/Less than/ \\
+%       > & \verb/Greater than/ \\
+%       \leq & \verb/Less than or equal/ \\
+%       \geq & \verb/Greater than or equal/ \\
+%       \neq & \verb/Inequality/ \\
+\end{symtab}
+Propositional logic and the schema calculus:
+\begin{symtab}
+%       \lnot & \verb/Not/ \\
+        \ldots\land\ldots & \verb/And/ \\
+        \ldots\lor\ldots & \verb/Or/ \\
+        \ldots\implies\ldots & \verb/Implies/ \\
+%       \iff & \verb/If and only if/ \\
+        \forall..\mid..\spot.. & \verb/For all/ \\
+        \exists..\mid..\spot.. & \verb/There exists/ \\
+%       \exists_1..\mid..\spot.. & \verb/There exists unique/ \\
+        \ldots\hide\ldots & \verb/Hiding/ \\
+%       \project & \verb/\project/ \\
+%       \pre & \verb/\pre/ \\
+%       \semi & \verb/\semi/
+        \ldots\defs\ldots & \verb/Schema definition/ \\
+        \ldots==\ldots & \verb/Abbreviation/ \\
+        \ldots::=\ldots\mid\ldots & \verb/Free type definition/ \\
+        \ldata\ldots\rdata & \verb/Free type injection/ \\
+        [\ldots] & \verb/Given sets/ \\
+        ',?,!,_0\ldots_9 & \verb/Schema decorations/ \\
+        \ldots\shows\ldots & \verb/theorem/ \\
+        \theta\ldots & \verb/Binding formation/ \\
+        \lambda\ldots & \verb/Function definition/ \\
+        \mu\ldots & \verb/Mu-expression/ \\
+        \Delta\ldots & \verb/State change/ \\
+        \Xi\ldots & \verb/Invariant state change/ \\
+\end{symtab}
+Sets and sequences:
+%and bags:
+\begin{symtab}
+        \{\ldots\} & \verb/Set/ \\
+        \{..\mid..\spot..\} & \verb/Set comprehension/ \\
+        \power\ldots & \verb/Set of subsets of/ \\
+%       \power_1 & \verb/Non-empty subsets of/ \\
+%       \finset & \verb/Finite sets/ \\
+%       \finset_1 & \verb/Non-empty finite sets/ \\
+        \emptyset & \verb/Empty set/ \\
+        \ldots\cross\ldots & \verb/Cartesian product/ \\
+        \ldots\in\ldots & \verb/Set membership/ \\
+        \ldots\notin\ldots & \verb/Set non-membership/ \\
+        \ldots\cup\ldots & \verb/Union/ \\
+        \ldots\cap\ldots & \verb/Intersection/ \\
+        \ldots\setminus\ldots & \verb/Set difference/ \\
+        \bigcup\ldots & \verb/Distributed union/ \\
+%       \bigcap & \verb/Distributed intersection/ \\
+        \#\ldots & \verb/Cardinality/ \\
+%       \dcat & \verb/Distributed sequence concatenation/
+        \ldots\subseteq\ldots & \verb/Subset/ \\
+        \ldots\subset\ldots & \verb/Proper subset/ \\
+        \ldots\partition\ldots & \verb/Set partition/ \\
+        \seq & \verb/Sequences/ \\
+%       \seq_1 & \verb/Non-empty sequences/ \\
+%       \iseq & \verb/Injective sequences/ \\
+        \langle\ldots\rangle & \verb/Sequence/ \\
+%       \cat & \verb/Sequence concatenation/ \\
+        \disjoint\ldots & \verb/Disjoint sequence of sets/ \\
+%       \bag & \verb/Bags/ \\
+%       \lbag\ldots\rbag & \verb/Bag/ \\
+%       \inbag & \verb/Bag membership/ \\
+\end{symtab}
+%Here are the infix function symbols. Each symbol is
+%shown with its priority:
+%\begin{symtab}
+%       \uplus & \verb/\uplus/ \\
+%       \filter & \verb/Schema projection/ \\
+%       \uminus & \verb/\uminus/
+%\end{symtab}
+Functions and relations:
+\begin{symtab}
+        \ldots\rel\ldots  & \verb/Relation/ \\
+        \ldots\pfun\ldots & \verb/Partial function/ \\
+        \ldots\fun\ldots  & \verb/Total function/ \\
+        \ldots\pinj\ldots & \verb/Partial injection/ \\
+        \ldots\inj\ldots  & \verb/Injection/ \\
+%       \psurj & \verb/Partial surjection/ \\
+%       \surj & \verb/Surjection/ \\
+%       \bij  & \verb/Bijection/ \\
+%       \ffun & \verb/Finite partial function/ \\
+%       \finj & \verb/Finite partial injection/ \\
+        \dom\ldots & \verb/Domain/ \\
+        \ran\ldots & \verb/Range/ \\
+        \ldots\mapsto\ldots & \verb/maplet/ \\
+        \ldots\inv & \verb/Relational inverse/ \\
+%       \ldots\plus & \verb/Transitive closure/ \\
+        \ldots\star & \verb/Reflexive-transitive closure/ \\
+%       \ldots\bsup n \esup & \verb/Relational iteration/ \\
+        \ldots\limg\ldots\rimg & \verb/Relational image/ \\
+%       \comp & \verb/Forward relational composition/ \\
+%       \circ & \verb/Relational composition/ \\
+        \ldots\oplus\ldots & \verb/Functional overriding/ \\
+        \ldots\dres\ldots & \verb/Domain restriction/ \\
+%       \ldots\rres\ldots & \verb/Range restriction/ \\
+        \ldots\ndres\ldots & \verb/Domain subtraction/ \\
+%       \ldots\nrres\ldots & \verb/Range subtraction/ \\
+%       \id & \verb/Identity relation/ \\
+\end{symtab}
+Axiomatic descriptions:
+%%unchecked
+\begin{axdef}
+  Declarations
+\where
+  Predicates
+\end{axdef}
+Schema definitions:
+%%unchecked
+\begin{schema}{SchemaName}
+  Declaration
+\where
+  Predicates
+\end{schema}
