@@ -59,7 +59,7 @@ This document specifies precisely some of the features of \emph{Linux control gr
 %=============================================================================
 \section{Introduction}
 
-In order to implement some features and improvements to \emph{Warden} we sharpen our understanding of Linux control groups 
+In order to implement some features and improvements to \emph{Warden} we sharpen our understanding of Linux control groups
 and simultaneously document their use by presenting an abstract model in Z\footnote{See appendix \ref{cha:znot} for a one-page summary of the Z notation.}.
 
 Linux control groups are part of the basis for the current implementation of Warden\cite{warden}\footnote{All references are listed in appendix \ref{sec:references}.} and Garden\cite{garden} as well as of Linux Containers (LXC), Docker, and Google's
@@ -103,7 +103,7 @@ the simple names out of which control group (path)names are formed, and the subs
 %----------------------------------------------------------------------------------------------------
 \subsection{Sets of resources}
 
-A subsystem will be concerned with resources, and we will model that by a set associated 
+A subsystem will be concerned with resources, and we will model that by a set associated
 with a control group. It is simpler to start with the resource sets by themselves.
 
 There is a $ResourceSet$ type:
@@ -136,7 +136,7 @@ rs? : ResourceSet
 \also
 \Delta Resources
 \where
-rs' = rs \setminus rs? 
+rs' = rs \setminus rs?
 \end{schema}
 where we just take 'em all out.
 
@@ -184,7 +184,7 @@ cg : CGPath \ffun CGroup
 ROOTCGROUPNAME \in \dom cg \\
 \forall s : \dom cg @ \forall t : CGPath | t \subset s @ t \in \dom cg
 \end{schema}
-The constraints imply that there is  at least one $CGroup$ in the collection (the root) and that the names are `prefix-closed'. The latter constraint is equivalent to saying the names fit together in a tree-structure (as in a file-system). 
+The constraints imply that there is  at least one $CGroup$ in the collection (the root) and that the names are `prefix-closed'. The latter constraint is equivalent to saying the names fit together in a tree-structure (as in a file-system).
 There is a $CGroup$ for every node in the tree, `named' by the sequence of simple names from the root to the node.
 
 We have said nothing about the \emph{tasks} in the $CGroup$s in the named collection.
@@ -250,23 +250,23 @@ task? \in systasks \\
 task? \neq INITIALTASK \\
 systasks'  = systasks \setminus \{ task? \}
 \end{schema}
-The task being destroyed is already in the system; it must not be the system's initial task 
-(this constraint could have been \emph{derived} since $Tasks'$ already insists that $INITIALTASK$ 
+The task being destroyed is already in the system; it must not be the system's initial task
+(this constraint could have been \emph{derived} since $Tasks'$ already insists that $INITIALTASK$
 must remain in $systasks'$);
 the task is removed from the set of system tasks, without disturbing the other tasks.
 
-Of course we know there is a parent/child relationship between tasks which the system knows and maintains. 
-We don't think we need to know about that (except at create time) so we don't model 
-it\footnote{If we need this it will become clear later when we cannot express a constraint, 
+Of course we know there is a parent/child relationship between tasks which the system knows and maintains.
+We don't think we need to know about that (except at create time) so we don't model
+it\footnote{If we need this it will become clear later when we cannot express a constraint,
 or cannot describe a change of state correctly.}.
 
 %=============================================================================
 \section{Control group hierarchies}
 
-Although it appears not possible to have a control group hierarchy without an attached subsystem 
+Although it appears not possible to have a control group hierarchy without an attached subsystem
 (see section~\ref{sec:experiments}) we find it easier to consider hierarchies in isolation first.
 
-We combine the named control groups and system tasks and say how they should be related. 
+We combine the named control groups and system tasks and say how they should be related.
 At the same time we describe a function $cgroup$ which maps each task to a control group in the collection.
 
 We are defining a \emph{hierarchy} of control groups:
@@ -282,27 +282,27 @@ tasks \circ cg \partition systasks
 \dom cgroup = systasks \\
 \forall t : systasks @ t \in tasks ( cg (cgroup ~ t))
 \end{schema}
-Each task of the system is in precisely one control group, or, as expressed here, 
-the control group tasks \emph{partition} the system tasks; 
-\emph{and} there is a function ($cgroup$) which maps each system task to the (full) name 
+Each task of the system is in precisely one control group, or, as expressed here,
+the control group tasks \emph{partition} the system tasks;
+\emph{and} there is a function ($cgroup$) which maps each system task to the (full) name
 ($CGPath$) of the control group in which it resides.
 
-We note that the existence of the function $cgroup$ is guaranteed by the partition requirement 
-(on $tasks \circ cg$) that accompanies it. 
-The function $cgroup$ is `derived state', and these assertions impose no extra constraints upon an hierarchy. 
+We note that the existence of the function $cgroup$ is guaranteed by the partition requirement
+(on $tasks \circ cg$) that accompanies it.
+The function $cgroup$ is `derived state', and these assertions impose no extra constraints upon a hierarchy.
 In fact, the existence of $cgroup$ is \emph{equivalent} to the partition constraint.
 
-It is legitimate to ask how a $CGHierarchy$ is initialised. 
-We describe this next along with other operations on an hierarchy.
+It is legitimate to ask how a $CGHierarchy$ is initialised.
+We describe this next along with other operations on a hierarchy.
 
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Hierarchy operations}
 
 It is natural to consider state changes that might `happen' to hierarchies.
-We will try to understand how an hierarchy is initialised, how new tasks enter or leave an hierarchy, 
-and how tasks are moved between control groups in an hierarchy.
-Then we can consider how a new control group of an hierarchy is created or destroyed.
+We will try to understand how a hierarchy is initialised, how new tasks enter or leave a hierarchy,
+and how tasks are moved between control groups in a hierarchy.
+Then we can consider how a new control group of a hierarchy is created or destroyed.
 
 Describing each of these operations precisely challenges our state descriptions and constraints---which helps us
 to believe that they capture exactly what we want to say.
@@ -310,7 +310,7 @@ to believe that they capture exactly what we want to say.
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Initialisation}
 
-We first consider initialisation of an hierarchy. This is a sort of degenerate operation, as is common in Z specifications.
+We first consider initialisation of a hierarchy. This is a sort of degenerate operation, as is common in Z specifications.
 
 \begin{schema}{InitCGHierarchy}
 CGHierarchy' \\
@@ -322,25 +322,25 @@ systasks' = systasks? \\
 \land taskset' = systasks' ~~)
 \end{schema}
 We here \emph{decide}\footnote{We do not yet know if this is true.
-However, an assertion like this has the enormous advantage that it can be verified 
+However, an assertion like this has the enormous advantage that it can be verified
 and tested, as can all of the state transition descriptions. If necessary we will come back and change it.}
-that all existing system tasks are placed in the initial $CGroup$, 
-with the special root name. 
+that all existing system tasks are placed in the initial $CGroup$,
+with the special root name.
 Good job we declared it beforehand!
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{A single task operation skeleton}
 
-Since $Tasks$ is part of our $CGHierarchy$ state, it is natural to want to use our description of system task operations $CreateTask$ 
-and $DestroyTask$ when describing the (extra) effects upon an hierarchy. The create and destroy operation on
-$Tasks$ can be elaborated to explain what happens on the extended state. 
+Since $Tasks$ is part of our $CGHierarchy$ state, it is natural to want to use our description of system task operations $CreateTask$
+and $DestroyTask$ when describing the (extra) effects upon a hierarchy. The create and destroy operation on
+$Tasks$ can be elaborated to explain what happens on the extended state.
 In general this is called ``promotion'' and has well-trodden precedents in Z. Our usage here is more of an extension.
 
-We first say what all of these extensions have in common (expressed as a ``promotion'' schema), 
-which in our case says that fundamental task operations only affect a \emph{single task} in the hierarchy, while 
+We first say what all of these extensions have in common (expressed as a ``promotion'' schema),
+which in our case says that fundamental task operations only affect a \emph{single task} in the hierarchy, while
 everything else remains fixed.
 
-The $SingleTaskOp$ explains what remains fixed when performing a system task operation in an hierarchy. 
+The $SingleTaskOp$ explains what remains fixed when performing a system task operation in a hierarchy.
 It is a skeleton operation schema which we can adapt to particular cases.
 
 \begin{schema}{SingleTaskOp}
@@ -359,23 +359,23 @@ Except possibly for $task$, the system tasks are unaffected (neither created nor
 Except for this same $task$, the association between tasks and their control group path names ($cgroup$) is unaffected.
 The control group (directory) structure is likewise unaffected.
 
-Note that, as we noted before, the map $cgroup'$, which is \emph{derived state}, 
+Note that, as we noted before, the map $cgroup'$, which is \emph{derived state},
 uniquely determines the partition ($tasks \circ cg$) except possibly for
-empty control groups. And, \emph{vice versa}, the partition determines the $cgroup$ map. 
+empty control groups. And, \emph{vice versa}, the partition determines the $cgroup$ map.
 
-Simply saying what the new $cgroup$ map should be and that no extra empty control groups arise 
-(which is the force of $\dom cg = \dom cg'$) 
+Simply saying what the new $cgroup$ map should be and that no extra empty control groups arise
+(which is the force of $\dom cg = \dom cg'$)
 suffices to determine the rest of the new state, partition included.
 
-With this skeleton\footnote{We notice, for the first time, just how symmetric this is: 
-reverse all the (state) operations (swapping all primed states with their un-primed states---for 
+With this skeleton\footnote{We notice, for the first time, just how symmetric this is:
+reverse all the (state) operations (swapping all primed states with their un-primed states---for
 example $cgroup'$ and $cgroup$ are exchanged) and we have the same promotion schema.}
 we can describe the next operations easily.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Create a new task in an hierarchy}
+\subsubsection{Create a new task in a hierarchy}
 
-Here we extend $CreateTask$ as a $SingleTaskOp$eration on an hierarchy.
+Here we extend $CreateTask$ as a $SingleTaskOp$eration on a hierarchy.
 
 \begin{schema}{CreateTaskInCG}
 CreateTask \\
@@ -383,11 +383,11 @@ SingleTaskOp[task! / task]
 \where
 cgroup' ~ task! = cgroup ~ parent?
 \end{schema}
-The particular task is renamed to be the \emph{output} task (the one created). 
+The particular task is renamed to be the \emph{output} task (the one created).
 Everything else stays the same (see $SingleTaskOp$) and the new $task!$ goes in the $parent?$'s control group.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Destroy an existing task in an hierarchy}
+\subsubsection{Destroy an existing task in a hierarchy}
 
 Deleting a task from the system is even easier to explain:
 
@@ -396,22 +396,22 @@ DestroyTask \\
 SingleTaskOp[task? / task]
 \end{schema}
 The particular task is renamed to be the \emph{input} task (the one to be deleted).
-Everything else stays the same (see $SingleTaskOp$). 
-No more needs to be said, since after $DestroyTask$ removes $task?$ from $systasks'$, 
+Everything else stays the same (see $SingleTaskOp$).
+No more needs to be said, since after $DestroyTask$ removes $task?$ from $systasks'$,
 everything else is `healed' by the constraints in the promotion.
 
 We are heartened by this: $SingleTaskOp$ captures exactly what we mean by a `task-local' change,
-and is sufficient to precisely describe the effects on the $CGHierarchy$ when such changes occur, excepting only 
+and is sufficient to precisely describe the effects on the $CGHierarchy$ when such changes occur, excepting only
 when there is
-an hierarchy-specific piece of information to supply.
+a hierarchy-specific piece of information to supply.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Move a task from one control group to another}
 
-Within an hierarchy we want to explain what happens if we move a task from one control group to another.
-The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy. 
-We need to supply the task which we are moving ($task?$), 
-and the (full name of the) control group we are moving it to ($dest?$). 
+Within a hierarchy we want to explain what happens if we move a task from one control group to another.
+The system tasks are not changed by this, and we need to preserve the partitioning nature of the hierarchy.
+We need to supply the task which we are moving ($task?$),
+and the (full name of the) control group we are moving it to ($dest?$).
 We do not need to supply the control group it `moves from', because the hierarchy state has that information already.
 
 This, it turns out, is another ``single task operation'', so we can use $SingleTaskOp$ again to help to explain it.
@@ -420,19 +420,19 @@ This, it turns out, is another ``single task operation'', so we can use $SingleT
 dest? : CGPath
 \also
 SingleTaskOp[task? / task] \\
-\Xi Tasks 
+\Xi Tasks
 \where
 task? \in systasks \\
 dest? \in \dom cg
 \also
 cgroup' ~ task?  = dest?
 \end{schema}
-The constraints on the inputs are that the $task?$ exists already and 
+The constraints on the inputs are that the $task?$ exists already and
 the path ($dest?$) is the name of a known control group (of this hierarchy).
 The new map $cgroup'$ must map $task?$ to the control group with path name $dest?$.
 
 Amazingly, this is all we need to say. The last line implies that $task? \in \dom cgroup'$ and therefore
-$tasks? \in systasks'$ too (from $CGHierarchy'$). 
+$tasks? \in systasks'$ too (from $CGHierarchy'$).
 
 $\Xi Tasks$ ensures that $task?$ must also be in $systasks$ before we start, so `the task exists already' is implied by the last line, although we prefer to be explicit about it.
 
@@ -442,9 +442,9 @@ It is instructive to consider what this operation specification implies if $dest
 attempt to move a task to the control group it is already in. It should be clear that nothing changes in this case.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Create a new $CGroup$ in an hierarchy}
+\subsubsection{Create a new $CGroup$ in a hierarchy}
 
-How does a new control group arise (in an hierarchy)?
+How does a new control group arise (in a hierarchy)?
 Clearly we need to name it, and it must have an initial state, but there are also things to do with the
 hierarchy that have to be true, and we mustn't disturb the task structure of the system when
 creating a new control group, either:
@@ -466,7 +466,7 @@ What does it mean for the path to `fit'? It means that all its prefixes are in $
 The constraint which says `$path?$ is not the root', is strictly redundant (it can be derived from the other constraints).
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsubsection{Delete a $CGroup$ from an hierarchy}
+\subsubsection{Delete a $CGroup$ from a hierarchy}
 
 When a control group is deleted, what happens to its tasks or its children (in the hierarchy)?
 This is explained by saying that you can only destroy control groups that don't have tasks or children.
@@ -483,14 +483,14 @@ path? \neq ROOTCGROUPNAME \\
 cg = cg' \cup \{ path? \mapsto EmptyCGroup \} \\
 cgroup' = cgroup
 \end{schema}
-The constraints say: this is not a new path (it's not in the new state); it cannot be the root; 
+The constraints say: this is not a new path (it's not in the new state); it cannot be the root;
 the path identifies the empty control group (in the old state); the task partition is unaffected.
 
-Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly, 
+Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly,
 this means it cannot have had any children beforehand.
 
-The constraint which says `$path?$ is not the root', is \emph{also} redundant. 
-It is harder to see why in this case, but removing the root would produce a $CGHierarchy'$ with an empty map $cg'$. 
+The constraint which says `$path?$ is not the root', is \emph{also} redundant.
+It is harder to see why in this case, but removing the root would produce a $CGHierarchy'$ with an empty map $cg'$.
 The constraints on $CGHierarchy'$ (in particular from the $NamedCGroups'$ schema) prohibit this.
 
 The constraints for $Create$... and $Destroy$... are deliberately symmetric.
@@ -508,9 +508,9 @@ pinned : \finset CGPath
 \where
 pinned = \dom(res \nrres \{ \emptyset \})
 \end{schema}
-Resource sets ``named by control group path names'' are represented by the map $res$; 
-$pinned$ is derived state (completely determined by $res$) and consists of the control group path 
-names which refer to non-empty resource sets\footnote{$\dom(res \nrres \{ \emptyset \})$ 
+Resource sets ``named by control group path names'' are represented by the map $res$;
+$pinned$ is derived state (completely determined by $res$) and consists of the control group path
+names which refer to non-empty resource sets\footnote{$\dom(res \nrres \{ \emptyset \})$
 is a technical jewel, meaning the domain
 of the relation which is that subset of $res$ consisting of pairs that relate names to the empty
 resource set.}.
@@ -530,11 +530,11 @@ pinned' = \emptyset
 \end{zed}
 which doesn't tie down the domain of $res$, but at least says that there are no resources in its range.
 
-\emph{This is a mistake.}  
+\emph{This is a mistake.}
 There is \emph{no} guarantee that a subsystem initially uses \emph{no} resources---in fact it is
-extremely likely that \emph{some} resources will be used by the tasks of the system which, remember, appear in the 
+extremely likely that \emph{some} resources will be used by the tasks of the system which, remember, appear in the
 root of a hierarchy when
-it is created. So we should not say anything about an \emph{initial} $Subsystem$. 
+it is created. So we should not say anything about an \emph{initial} $Subsystem$.
 For completeness we will define the name though:
 \begin{zed}
 InitSubsystem \defs Subsystem'
@@ -564,9 +564,9 @@ its resource set ($rs$ goes to $rs'$).
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Add and remove resources}
-When we combine $SubsystemResourcesOp$ with operations on $Resources$ 
+When we combine $SubsystemResourcesOp$ with operations on $Resources$
 (which include the signature $\Delta Resources$)
-we get a lifted operation definition on $Subsystem$ except for the $\Delta Resources$ signature, 
+we get a lifted operation definition on $Subsystem$ except for the $\Delta Resources$ signature,
 which we can then hide.
 
 \begin{zed}
@@ -577,12 +577,12 @@ RemoveSSResources \defs \\
 \t2 \exists \Delta Resources @ ( RemoveResources \land SubsystemResourcesOp )
 \end{zed}
 The $\exists \Delta Resources @$ prefix is just a clumsy way of hiding the $Resources$ and $Resources'$ states
-which we only needed to expose to explain the lifting, and should not be exposed on the 
+which we only needed to expose to explain the lifting, and should not be exposed on the
 subsystem operation.
 
 Are these \emph{really} operations on $Subsystem$?
 
-We can demonstrate that they are by deriving the ``signature'' of, for example, $AddSSResources$, 
+We can demonstrate that they are by deriving the ``signature'' of, for example, $AddSSResources$,
 and it works out as\footnote{Not really,
 for we have preserved some constraints in the declarations to make it easier to relate to our other operations.}:
 
@@ -604,12 +604,12 @@ CGHierarchy
 \dom res = \dom cg
 \end{schema}
 The control group paths that the subsystem tracks are precisely the ones in
-the attached hierarchy. 
+the attached hierarchy.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Attached subsystem operations}
 The operations on $CGHierarchy$ and those on $Subsystem$ can now be lifted to $AttachedSubsystem$
-by similar lifting mechanisms we used before. The constraints (aka preconditions) imposed 
+by similar lifting mechanisms we used before. The constraints (aka preconditions) imposed
 by $CGHierarchy$ and $Subsystem$ operations combine via the
 $AttachedSubsystem$ constraint, to enable us to derive many (but not all) of the preconditions of the lifted operations.
 
@@ -653,10 +653,10 @@ Here we've introduced a local shorthand $cgp$ for $cgroup' ~ task!$, the name of
 the new task ($task!$); the resource-set map, $res$, remains the same on all control groups except this one;
 on this one the resource set usage may increase (but it cannot decrease).
 
-This is intentionally non-deterministic because we cannot say what resources a new task might require or 
+This is intentionally non-deterministic because we cannot say what resources a new task might require or
 what its parent might require. In general, then, we might add resources into the control group.
 
-Note that it is possible for the $pinned$ set to increase but only by the addition of the single control group 
+Note that it is possible for the $pinned$ set to increase but only by the addition of the single control group
 named $cgp$.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
@@ -689,12 +689,12 @@ MoveCGroupTask
 \t1 res' ~ src \subseteq res ~ src \land \\
 \t1 res ~ dest? \subseteq res' ~ dest?
 \end{schema}
-This time we introduce local shorthand for the source control group ($src$); 
+This time we introduce local shorthand for the source control group ($src$);
 the $res$ map remains unchanged on all control groups except possibly for the source and destination control groups;
 the source control group resources might decrease;
 the destination control group resources might increase.
 
-We are tempted to say that the resources transfer from one control group to the other; but we cannot say this. 
+We are tempted to say that the resources transfer from one control group to the other; but we cannot say this.
 In general the transfer may involve extra resources, or it may reduce the resources used. Particular
 subsystems might be able to say more about this.
 
@@ -710,7 +710,7 @@ We have to explain what parts of the subsystem may change when a new control gro
 CreateCGroup
 \where
 res' ~ path? = \emptyset \\
-res = \{path?\} \ndres res' 
+res = \{path?\} \ndres res'
 \end{schema}
 The new control group uses no resources (and has no tasks you may recall from $CreateCGroup$); the resources
 for all the other control groups remain the same. Notice how the $\Delta AttachedSubsystem$ constraints save us
@@ -725,11 +725,11 @@ We have to explain what parts of the subsystem may change when a control group i
 DestroyCGroup
 \where
 res ~ path? = \emptyset \\
-res' = \{path?\} \ndres res 
+res' = \{path?\} \ndres res
 \end{schema}
 The control group being destroyed \emph{must not be using any resources};
-the resources for all the other control groups remain 
-the same. 
+the resources for all the other control groups remain
+the same.
 
 Not using any resources tallies with the $CGHierarchy$ operation constraint that it must have no tasks when it is
 destroyed, although not having tasks doesn't imply it is not using resources).
@@ -740,7 +740,7 @@ We also get the parent-child restrictions for free (ultimately from $NamedCGroup
 \subsubsection{Operations lifted from $Subsystem$}
 
 Adding or removing resources rom a particular control group has no effect on the structure or the tasks
-in an hierarchy.
+in a hierarchy.
 
 We can therefore lift the $Add$ and $Remove$ resources operations directly as follows:
 
@@ -763,7 +763,7 @@ to the same hierarchy.
 We model this as a collection of $AttachedSubsystem$s, where the hierarchies are identical.
 A function which extracts just the control group hierarchy from an $AttachedSubsystem$ is then useful:
 \begin{zed}
-cgHierarchy == (\lambda AttachedSubsystem @ \theta CGHierarchy) 
+cgHierarchy == (\lambda AttachedSubsystem @ \theta CGHierarchy)
 \end{zed}
 and we can use this  function to ensure that the hierarchies spoken of in the $AttachedSubsystem$
 collection are all the same.
@@ -779,7 +779,7 @@ subNames = \dom subs \\
 \forall sn : subNames @ \\
     \t1 cgHierarchy(subs ~ sn) = commonCGH
 \end{schema}
-The domain of the map is exactly the set of subsystem names, and every named subsystem's 
+The domain of the map is exactly the set of subsystem names, and every named subsystem's
 control group hierarchy is identical to the top-level one.
 
 There are two points to be made: the set of subsystem names ($subNames$) is \emph{non-empty}, ensuring at least
@@ -789,7 +789,7 @@ we will see advantages to giving it a separate, subsystem-independent name later
 %----------------------------------------------------------------------------------------------------
 \subsection{Many subsystems operations}
 
-Previously we have used $\Delta$ to indicate the before and after states of a schema, but in this case we want to 
+Previously we have used $\Delta$ to indicate the before and after states of a schema, but in this case we want to
 impose an additional constraint on all of our operations. After a $MultiSubsystem$ is created we want to insist that
 the set of subsystems remains fixed. This reflects reality where the act of \texttt{mount}ing the subsystems creates the
 hierarchy at the same time, and there is no API for partially \emph{un}mounting a subsystem, or adding one to an existing mount point.
@@ -826,7 +826,7 @@ initialised appropriately. The $MultiSubsystems'$ constraints imply that the hie
 \subsubsection{Lifting attached subsystem operations}
 
 The operations to be lifted are: create,  destroy and move a task;
-create and destroy a control group; and add and remove resources, which should act on an 
+create and destroy a control group; and add and remove resources, which should act on an
 identified subsystem.
 
 These groups of operations are lifted in two different ways, reflecting the fact that four of them
@@ -951,7 +951,7 @@ AddResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
 RemoveResourcesInMultiSs \defs  \exists \Delta AttachedSubsystem @ \\
     \t1 RemoveResourcesInAttachedSubsystem \land OnlySubsystemChange
 \end{zed}
-Here we use standard pointwise lifting. 
+Here we use standard pointwise lifting.
 
 The subsystem name input ($sn?$) appears in $OnlySubsystemChange$
 and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
@@ -968,7 +968,7 @@ and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
 
 
 %=============================================================================
-%   S O U R C E S 
+%   S O U R C E S
 %=============================================================================
 \section{Sources}
 \label{sec:sources}
@@ -1032,10 +1032,10 @@ the tasks in each cgroup.
 \end{verbatim}}
 
 Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it commits some
-specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work; 
-it is no worse---and in many ways better---than many such.} (see \cite{7sins}). 
+specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work;
+it is no worse---and in many ways better---than many such.} (see \cite{7sins}).
 For example, it is ambiguous concerning the number of and relationship between hierarchies; it
-doesn't explain what the initial state of a control group is; it talks about tasks and processes as though they were the same without comment (we think they are the same); 
+doesn't explain what the initial state of a control group is; it talks about tasks and processes as though they were the same without comment (we think they are the same);
 the rules about the relationship between tasks and control groups sound contradictory; and so on.
 
 
@@ -1045,7 +1045,7 @@ the rules about the relationship between tasks and control groups sound contradi
 \section{Notes and experiments}
 \label{sec:notes}
 
-We gather here some observations, experiments and discussions which have informed our research. 
+We gather here some observations, experiments and discussions which have informed our research.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Mailing lists discussions}
@@ -1069,7 +1069,7 @@ Attaching multiple subsystems to a single hierarchy:
 # cd test
 # mkdir parent
 # cd parent
-# echo 0 > cpuset.mems 
+# echo 0 > cpuset.mems
 # echo 0 > cpuset.cpus
 # echo $$ > tasks
 # cat tasks
@@ -1091,7 +1091,7 @@ devices	3	1	1
 freezer	0	1	1
 blkio	13	2	1
 perf_event	0	1	1
-# cat /proc/mounts 
+# cat /proc/mounts
 ...
 none /tmp/warden/cgroup tmpfs rw,relatime 0 0
 none /tmp/warden/cgroup/cpu cgroup rw,relatime,cpu 0 0
@@ -1106,7 +1106,7 @@ none /tmp/warden/cgroup/test cgroup rw,relatime,blkio,cpuset 0 0
 
 Attaching a single subsystem to multiple hierarchies:
 {\scriptsize \begin{verbatim}
-$ pwd   
+$ pwd
 /home/vagrant
 $ mkdir mem1
 $ mkdir mem2
@@ -1114,16 +1114,16 @@ $ sudo su
 # mount -t cgroup -o memory none /home/vagrant/mem1
 # mount -t cgroup -o memory none /home/vagrant/mem2
 # cd mem1
-# mkdir inst1  
-# ls inst1 
+# mkdir inst1
+# ls inst1
 cgroup.clone_children  memory.failcnt ...
 # ls ../mem2
 cgroup.clone_children  inst1 memory.limit_in_bytes ...
 # cd inst1
-# echo 1000000 > memory.limit_in_bytes 
-# cat memory.limit_in_bytes 
+# echo 1000000 > memory.limit_in_bytes
+# cat memory.limit_in_bytes
 1003520
-# cat ../../mem2/inst1/memory.limit_in_bytes 
+# cat ../../mem2/inst1/memory.limit_in_bytes
 1003520
 # echo $$ > tasks
 # cat tasks
@@ -1154,8 +1154,8 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 \newpage
 \begin{flushleft}
 \begin{thebibliography}{99}
-\label{sec:references}  
-% `99' is a picture of the generated numeric references -- they are two digits in this bibliography 
+\label{sec:references}
+% `99' is a picture of the generated numeric references -- they are two digits in this bibliography
 % If we had a hundred or more we would have used 999, or whatever.
 
 %%  Example bibliography entry:
@@ -1171,7 +1171,7 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 
 \bibitem{garden}
   Various authors,
-  \emph{Garden github repository}, 
+  \emph{Garden github repository},
   \texttt{https://github.com/pivotal-cf-experimental/garden}.
 
 % API abstracting the cgroup filesystem
@@ -1203,7 +1203,7 @@ cgroup.clone_children  inst1 memory.limit_in_bytes ...
 
 \bibitem{rharticle}
   Martin Prpi\u{c}, R\"udiger Landmann, and Douglas Silas,
-  \emph{Red Hat Enterprise Linux 6.5 GA: Resource Management Guide}, 
+  \emph{Red Hat Enterprise Linux 6.5 GA: Resource Management Guide},
   {\small \texttt{https://access.redhat.com/site/documentation/en-US\slash{}Red\_Hat\_Enterprise\_Linux/6/pdf/Resource\_Management\_Guide\slash{}Red\_Hat\_Enterprise\_Linux-6-Resource\_Management\_Guide-en-US.pdf}}.
 
 \bibitem{7sins}
