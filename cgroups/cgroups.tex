@@ -2,7 +2,7 @@
 \usepackage{../z/zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.7 restructure doc}
+\markboth{Draft}{Version 0.8 add cgroups api}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -31,11 +31,7 @@ This document specifies precisely some of the features of \emph{Linux control gr
 
 \paragraph{Current ``to-do'' list:}
 \begin{itemize}
-\item (\textsc{Done}) \emph{Move stuff to appendices};
-\item \emph{Linux API}---relate spec ops to mount (\emph{etc.});
 \item \emph{extract improved cgroups description}---derive patch to external docs.
-\item (\textsc{Dropped}) \emph{cross-reference experiments};
-\item (\textsc{Dropped}) \emph{Red Hat rules}---discuss  Red Hat rules (with quotations).
 \end{itemize}
 
 % Alt-Cmd-M -- \emph{}
@@ -69,7 +65,7 @@ Foundry.
 We intend to use our improved understanding to benefit:
 \begin{itemize}
 \item Linux Kernel documentation;
-\item Warden \cite{warden} and Garden \cite{garden} development and exploitation; and
+\item Warden\cite{warden} and Garden\cite{garden} development and exploitation; and
 \item the wider development audience.
 \end{itemize}
 
@@ -1126,17 +1122,17 @@ than by an explicit command or action by a process.
 
 As input to this work we accessed the following sources of information:
 \begin{description}
-\item[Kernel specs] descriptions of control groups in the Kernel literature \cite{linuxgroups};
-\item[Kernel code] the Linux Kernel \cite{linuxkernel};
+\item[Kernel specs] descriptions of control groups in the Kernel literature\cite{linuxgroups};
+\item[Kernel code] the Linux Kernel\cite{linuxkernel};
 \item[experiments] tests run against the \texttt{cgroups} kernel code (see appendix \ref{sec:notes});
-\item[RedHat article] \cite{rharticle} which provides ``invariants'' of the filesystem;
-\item[Linux kernel mailing list] \cite{noop} for informative and timely Q and A.
+\item[RedHat article] which provides ``invariants'' of the filesystem\cite{rharticle};
+\item[Linux kernel mailing list] for informative and timely Q and A\cite{noop}.
 \end{description}
 
 %----------------------------------------------------------------------------------------------------
-\subsection{The Linux specification \cite{linuxgroups}}
+\subsection{The Linux specification\cite{linuxgroups}}
 
-Here is the first section of \cite{linuxgroups}:
+Here is the first section of the Linux \texttt{cgroups} specification\cite{linuxgroups}:
 
 {\scriptsize \begin{verbatim}
 1.1 What are cgroups ?
@@ -1184,7 +1180,7 @@ the tasks in each cgroup.
 
 Although this reads reasonably well (and by comparison to its peers it is a pretty good document) it commits some
 specification sins\footnote{We don't mean this as an insult: without documents like these we couldn't do our work;
-it is no worse---and in many ways better---than many such.} (see \cite{7sins}).
+it is no worse---and in many ways better---than many such.} (see Meyer\cite{7sins}).
 For example, it is ambiguous concerning the number of and relationship between hierarchies; it
 doesn't explain what the initial state of a control group is; it talks about tasks and processes as though they were the same without comment (we think they are the same);
 the rules about the relationship between tasks and control groups sound contradictory; and so on.
@@ -1202,7 +1198,7 @@ We gather here some observations, experiments and discussions which have informe
 \subsection{Mailing lists discussions}
 
 It does not seem possible to define a \texttt{cgroup} hierarchy with no subsystems attached to it.
-See the discussion \cite{noop}.
+See the mailing list discussion\cite{noop}.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Experiments}
