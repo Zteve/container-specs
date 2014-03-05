@@ -78,11 +78,12 @@ We intend to use our improved understanding to benefit:
 %=============================================================================
 \section{Fundamentals}
 
-We begin by describing some fundamental pieces of our description.
+We begin by describing some fundamental pieces of our model.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Given sets}
-There are fundamental sets of items we will not look into, for example $TASK$s:
+There are fundamental sets of items we will not look into, 
+for example $TASK$s\footnote{A \emph{task} is the Linux kernel term for a process.}:
 \begin{zed}
 [TASK]
 \end{zed}
@@ -264,7 +265,8 @@ or cannot describe a change of state correctly.}.
 \section{Control group hierarchies}
 
 Although it appears not possible to have a control group hierarchy without an attached subsystem
-(see section~\ref{sec:experiments}) we find it easier to consider hierarchies in isolation first.
+(see section~\ref{sec:experiments}) we find it easier to consider hierarchies in isolation 
+first\footnote{This may reflect the behaviour of the re-architected \emph{cgroups} function currently being developed.}.
 
 We combine the named control groups and system tasks and say how they should be related.
 At the same time we describe a function $cgroup$ which maps each task to a control group in the collection.
@@ -321,12 +323,8 @@ systasks' = systasks? \\
 ( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
 \land taskset' = systasks' ~~)
 \end{schema}
-We here \emph{decide}\footnote{We do not yet know if this is true.
-However, an assertion like this has the enormous advantage that it can be verified
-and tested, as can all of the state transition descriptions. If necessary we will come back and change it.}
-that all existing system tasks are placed in the initial $CGroup$,
+All existing system tasks are placed in the initial $CGroup$,
 with the special root name.
-Good job we declared it beforehand!
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{A single task operation skeleton}
@@ -486,7 +484,7 @@ cgroup' = cgroup
 The constraints say: this is not a new path (it's not in the new state); it cannot be the root;
 the path identifies the empty control group (in the old state); the task partition is unaffected.
 
-Notice that the path \emph{used to}`fit' in $cg$, and if removing it leaves the $cg'$ structured correctly,
+Notice that the path \emph{used to} `fit' in $cg$, and if removing it leaves the $cg'$ structured correctly,
 this means it cannot have had any children beforehand.
 
 The constraint which says `$path?$ is not the root', is \emph{also} redundant.
@@ -512,7 +510,7 @@ Resource sets ``named by control group path names'' are represented by the map $
 $pinned$ is derived state (completely determined by $res$) and consists of the control group path
 names which refer to non-empty resource sets\footnote{$\dom(res \nrres \{ \emptyset \})$
 is a technical jewel, meaning the domain
-of the relation which is that subset of $res$ consisting of pairs that relate names to the empty
+of the relation which is that subset of $res$ consisting of pairs that do not relate names to the empty
 resource set.}.
 
 %----------------------------------------------------------------------------------------------------
@@ -622,8 +620,6 @@ The initially attached subsystem ought to be a simple combination of initial sub
 InitAttachedSubsystem \defs \\
 \t1 AttachedSubsystem' \land InitSubsystem \land InitCGHierarchy
 \end{zed}
-simplesh.
-
 Notice that the resources used by the initial (root) control group might be anything---we had to allow this when
 explaining $InitSubsystem$.
 
@@ -739,7 +735,7 @@ We also get the parent-child restrictions for free (ultimately from $NamedCGroup
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Operations lifted from $Subsystem$}
 
-Adding or removing resources rom a particular control group has no effect on the structure or the tasks
+Adding or removing resources from a particular control group has no effect on the structure or the tasks
 in a hierarchy.
 
 We can therefore lift the $Add$ and $Remove$ resources operations directly as follows:
@@ -832,7 +828,7 @@ identified subsystem.
 These groups of operations are lifted in two different ways, reflecting the fact that four of them
 affect \emph{all} the subsystems, and two of them (the resource ones) affect only \emph{one} subsystem.
 
-The first way is where all the subsystem change together. We describe what one among many changes might look like:
+The first way is where all the subsystems change together. We describe what one among many changes might look like:
 \begin{schema}{OneSubsystemChange}
 sn : SSNAME \\
 MultiSubsystemsChange \\
