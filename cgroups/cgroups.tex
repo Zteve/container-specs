@@ -952,9 +952,164 @@ Here we use standard pointwise lifting.
 The subsystem name input ($sn?$) appears in $OnlySubsystemChange$
 and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
 
-\clearpage
+%=============================================================================
+\section{Relating the model to \texttt{cgroups} function}
+
+Each operation on the $MuiltiSubsystems$ state is related to a kernel command or action. 
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$InitMultiSubsystems$}
+
+The signature of the initialisation in the model is:
+
+\begin{schema*}
+    systasks?: \finset TASK \\
+    subNames? : \finset SSNAME \\
+\also
+  MultiSubsystems'
+\end{schema*}
+The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it names and attaches subsystems to a 
+(newly created) hierarchy.
+
+\begin{verbatim}
+    mount -t cgroup <mountName> -o<subNames> <h-path>
+\end{verbatim}
+The \texttt{<mountName>} is ignored (except perhaps for messages), 
+the option (following \texttt{-o}) is a non-empty list of subsystem names
+($subNames?$), and \texttt{<h-path>} is a location in a filesystem
+where the state of the multiple subsystems and the hierarchy are surfaced (see further API).
+
+The input $systasks?$ is the set of extant tasks (processes) in the system when the subsystems and hierarchy
+are created and is an implicit parameter to the \texttt{mount}.
+
+Directories in the control group filesystem at \texttt{<h-path>} correspond to control groups, 
+and each subsystem contributes
+(pseudo) files to those directories.
+
+Notice that if any filesystem is mounted on an existing mount point (\texttt{<h-path>} above) then the first 
+\texttt{mount} is overwritten.
+A consequence of this is that subsystems may not be detached or attached to hierarchies that are already mounted.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$CreateTaskInMultiSs$}
+
+The signature of the task creation operation is:
+\begin{schema*}
+    parent?: TASK \\
+    task!: TASK \\
+\also
+    \Delta MultiSubsystems
+\end{schema*}
+A task created by any process automatically causes this operation to occur for all attached subsystems.
+
+The implicit input $parent?$ is the new task's parent task, and the output $task!$ is the task which is created.
+
+As the subsystem state changes so the
+filesystem rooted in \texttt{<h-path>} reflects these updates for the relevant control groups.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$DestroyTaskInMultiSs$}
+
+Similarly, the signature of the task destruction operation is:
+\begin{schema*}
+    task?: TASK
+\also 
+    \Delta MultiSubsystems
+\end{schema*}
+When a task dies and the kernel decides it has been destroyed then this operation occurs.
+
+The input $task?$ is the task which is about to die.
+
+As the subsystem state changes so the
+filesystem rooted in \texttt{<h-path>} reflects these updates for the relevant control groups.
+
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$MoveTaskInMultiSs$}
+
+Moving a task from one control group to another has this signature:
+\begin{schema*}
+    task?: TASK \\
+    dest?: CGPath
+\also 
+    \Delta MultiSubsystems
+\end{schema*}
+This is an operation explicitly initiated by a control group action, for example when
+the process id (\texttt{pid}) referring to the task ($task?$) is written into a 
+(pseudo) file in the \texttt{cgroup} filesystem 
+(rooted at \texttt{<h-path>}),
+in a directory corresponding to the destination \texttt{cgroup} (path $dest?$).
+
+For example:
+\begin{verbatim}
+    echo 1234 >/h-path/dest/cg1/tasks
+\end{verbatim}
+will move the task with process id \texttt{1234} from whatever control group it is currently in to 
+the control group \texttt{dest/cg1}.
+
+Whether or not \emph{resources} move with the task is determined by subsystem settings, and is not
+prohibited nor mandated by our model operation.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$CreateCGroupInMultiSs$}
+
+Creating a new control group in a hierarchy has this signature:
+\begin{schema*}
+    path?: CGPath
+\also 
+    \Delta MultiSubsystems
+\end{schema*}
+A control group is created when a new directory is created (for example with \texttt{mkdir}) 
+in the \texttt{cgroup} filesystem.
+
+The input $path?$ is the relative path of the directory from the \texttt{<h-path>} root.
+
+Each subsystem automatically contributes
+(pseudo) files to the new directory. There are initially \emph{no} tasks associated with the new control group.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$DestroyCGroupInMultiSs$}
+
+Destroying a control group has the same signature as creating one:
+\begin{schema*}
+    path?: CGPath
+\also 
+    \Delta MultiSubsystems
+\end{schema*}
+A control group is deleted when its directory is removed (with \texttt{rmdir}, or equivalent) from the 
+\texttt{cgroup} filesystem.
+
+Before this will succeed (as the model describes), there must be no tasks and no resources 
+associated with that control group,
+and there must be no subdirectories in the control group directory.
+
+A consequence of these restrictions means that the root control group can never be deleted by this operation.
+
+%----------------------------------------------------------------------------------------------------
+\subsection{$Add$ and $Remove$ $ResourcesInMultiSs$}
+
+The model signatures for adding and removing resources managed by a subsystem are the same:
+
+\begin{schema*}
+    rs?: ResourceSet \\
+    cgp?: CGPath \\
+    sn?: SSNAME \\
+\also
+    \Delta MultiSubsystems
+\end{schema*}
+These are the set of resources to be added or removed ($rs?$), the control group where these resource changes are to take place ($cgp?$), and the (name of the) subsystem which is managing these resources ($sn?$).
+
+These operations describe only the most basic features of subsystems' resource management.
+They are limited to one subsystem's resources in one control group.
+
+They are instigated by a subsystem as a result of some system state change rather 
+than by an explicit command or action by a process.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+
 \appendix
 
 %=============================================================================
