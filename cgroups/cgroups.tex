@@ -2,7 +2,7 @@
 \usepackage{../z/zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.8 add cgroups api}
+\markboth{Draft}{Version 0.9 editorial changes}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -28,11 +28,6 @@ Steve Powell
 %=============================================================================
 
 This document specifies precisely some of the features of \emph{Linux control groups} and \emph{subsystems} to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
-
-\paragraph{Current ``to-do'' list:}
-\begin{itemize}
-\item \emph{extract improved cgroups description}---derive patch to external docs.
-\end{itemize}
 
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
@@ -69,10 +64,26 @@ We intend to use our improved understanding to benefit:
 \item the wider development audience.
 \end{itemize}
 
+%=============================================================================
+\section{Overview}
 
+We develop a model of a single \textit{control group hierarchy} from the bottom up, in stages:
+\begin{itemize}
+\item Section \ref{sec:fundamentals} introduces some basic types and the notion of a named \textit{control group} which consists of a
+collection of tasks. Basic operations for creating and destroying tasks are defined.
+\item  Section \ref{sec:cgh} models a control group \textit{hierarchy} as a collection of named control groups which partition the tasks
+in the system. Operations are added for creating and deleting control groups and for moving a task between control groups.
+\item Section \ref{sec:ss} introduces the notion of a \textit{subsystem} which identifies collections of \textit{resources} using control group names. Combining a subsystem with a hierarchy is deferred to Section \ref{sec:attss}.
+\item Section \ref{sec:manyss} completes the model as a system of multiple subsystems associated with a hierarchy.
+\end{itemize}
+
+The further stage of modelling a system of multiple control group hierarchies is omitted since distinct hierarchies operate independently of each other in the kernel.
+
+Section \ref{sec:kernel} then relates the model to kernel externals. Control group hierarchies are created using the \texttt{mount} command and monitored and managed using the mounted filesystem. The remaining control group hierarchy operations correspond to system actions, such as creating and destroying tasks.
 
 %=============================================================================
 \section{Fundamentals}
+\label{sec:fundamentals}
 
 We begin by describing some fundamental pieces of our model.
 
@@ -259,6 +270,7 @@ or cannot describe a change of state correctly.}.
 
 %=============================================================================
 \section{Control group hierarchies}
+\label{sec:cgh}
 
 Although it appears not possible to have a control group hierarchy without an attached subsystem
 (see section~\ref{sec:experiments}) we find it easier to consider hierarchies in isolation 
@@ -492,6 +504,7 @@ Doing it this way helped us to (write and) understand them.
 
 %=============================================================================
 \section{Subsystems}
+\label{sec:ss}
 
 A $Subsystem$ is a collection of resource sets named by $CGPath$ names. We will eventually marry
 this with a $GCHierarchy$, but we consider it in isolation first.
@@ -589,6 +602,8 @@ which is clearly an operation with inputs $rs?$, a set of resources, and $cgp?$,
 
 %=============================================================================
 \section{Attached subsystems}
+\label{sec:attss}
+
 $Subsystem$s are pretty an\ae{}mic because they are not yet `attached' to a hierarchy. This is what we describe next.
 
 \begin{schema}{AttachedSubsystem}
@@ -747,6 +762,7 @@ where $\Xi CGHierarchy$ documents that the hierarchy remains unchanged.
 
 %=============================================================================
 \section{Many subsystems}
+\label{sec:manyss}
 
 The aim of this section is to move away from considering just one subsystem and its affect upon
 a control group hierarchy, to the more general case where two or more subsystems are attached
@@ -950,8 +966,9 @@ and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
 
 %=============================================================================
 \section{Relating the model to \texttt{cgroups} function}
+\label{sec:kernel}
 
-Each operation on the $MuiltiSubsystems$ state is related to a kernel command or action. 
+Each operation on the $MultiSubsystems$ state is related to a kernel command or action. 
 
 %----------------------------------------------------------------------------------------------------
 \subsection{$InitMultiSubsystems$}
@@ -971,12 +988,12 @@ The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it names 
     mount -t cgroup <mountName> -o<subNames> <h-path>
 \end{verbatim}
 The \texttt{<mountName>} is ignored (except perhaps for messages), 
-the option (following \texttt{-o}) is a non-empty list of subsystem names
+the option (following \texttt{-o}) is a non-empty list\footnote{If the option is omitted, the list defaults to all the subsystems defined to the kernel} of subsystem names
 ($subNames?$), and \texttt{<h-path>} is a location in a filesystem
-where the state of the multiple subsystems and the hierarchy are surfaced (see further API).
+where the state of the multiple subsystems and the hierarchy are surfaced as a virtual filesystem (see further API).
 
 The input $systasks?$ is the set of extant tasks (processes) in the system when the subsystems and hierarchy
-are created and is an implicit parameter to the \texttt{mount}.
+are created and is an implicit parameter to \texttt{mount}.
 
 Directories in the control group filesystem at \texttt{<h-path>} correspond to control groups, 
 and each subsystem contributes
@@ -1001,7 +1018,7 @@ A task created by any process automatically causes this operation to occur for a
 The implicit input $parent?$ is the new task's parent task, and the output $task!$ is the task which is created.
 
 As the subsystem state changes so the
-filesystem rooted in \texttt{<h-path>} reflects these updates for the relevant control groups.
+filesystem rooted in \texttt{<h-path>} reflects these updates for the relevant control group.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{$DestroyTaskInMultiSs$}
@@ -1012,12 +1029,12 @@ Similarly, the signature of the task destruction operation is:
 \also 
     \Delta MultiSubsystems
 \end{schema*}
-When a task dies and the kernel decides it has been destroyed then this operation occurs.
+This operation occurs when a task dies.
 
-The input $task?$ is the task which is about to die.
+The input $task?$ is the dying task.
 
 As the subsystem state changes so the
-filesystem rooted in \texttt{<h-path>} reflects these updates for the relevant control groups.
+filesystem rooted in \texttt{<h-path>} reflects these updates for the relevant control group.
 
 
 %----------------------------------------------------------------------------------------------------
