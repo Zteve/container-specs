@@ -2,7 +2,7 @@
 \usepackage{../z/zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 0.9 editorial changes}
+\markboth{Final}{Version 1.0}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -18,16 +18,16 @@ Steve Powell
 }
 
 \maketitle
-% The following three commands ensure the title page is stamped as
-% confidential without a page number. Page numbering is started at the
-% table of contents.
-\thispagestyle{myheadings}
+% The following three commands ensure the title page is without a page number but page numbering starts here.
+% Page numbers appear on subsequent pages, and are roman until the main body, which starts again at arabic 1.
+\thispagestyle{empty}
 \pagenumbering{roman}
 \setcounter{page}{1}
 
 %=============================================================================
 
-This document specifies precisely some of the features of \emph{Linux control groups} and \emph{subsystems} to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
+This document specifies precisely some of the features of \emph{Linux control groups} and \emph{subsystems} 
+in order to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
 
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
@@ -46,15 +46,17 @@ This document specifies precisely some of the features of \emph{Linux control gr
 
 \cleardoublepage
 \pagenumbering{arabic}
+\setcounter{page}{1}
 
 %=============================================================================
 \section{Introduction}
 
 In order to implement some features and improvements to \emph{Warden} we sharpen our understanding of Linux control groups
-and simultaneously document their use by presenting an abstract model in Z\footnote{See appendix \ref{cha:znot} for a one-page summary of the Z notation.}.
+and simultaneously document their use by presenting an abstract model in Z\footnote{See appendix \ref{sec:znot} for a one-page summary of the Z notation.}.
 
-Linux control groups are part of the basis for the current implementation of Warden\cite{warden}\footnote{All references are listed in appendix \ref{sec:references}.} and Garden\cite{garden} as well as of Linux Containers (LXC), Docker, and Google's
-\textit{lmctfy} (``let me contain that for you'') project and so are important to the industry at large as well as to Cloud
+Linux control groups are part of the basis for the current implementation of Warden\cite{warden}\footnote{All references are listed in appendix \ref{sec:references}.} and 
+Garden\cite{garden} as well as of Linux Containers (LXC), Docker, and Google's
+\emph{lmctfy} (``let me contain that for you'') project and so are important to the industry at large as well as to Cloud
 Foundry.
 
 We intend to use our improved understanding to benefit:
@@ -65,21 +67,41 @@ We intend to use our improved understanding to benefit:
 \end{itemize}
 
 %=============================================================================
-\section{Overview}
+\section{Overview of this document}
 
-We develop a model of a single \textit{control group hierarchy} from the bottom up, in stages:
+We develop a model of a single \emph{control group hierarchy} from the bottom up, in stages:
 \begin{itemize}
-\item Section \ref{sec:fundamentals} introduces some basic types and the notion of a named \textit{control group} which consists of a
+
+\item Section \ref{sec:fundamentals} introduces some basic types and the notion of a named \emph{control group} which consists of a
 collection of tasks. Basic operations for creating and destroying tasks are defined.
-\item  Section \ref{sec:cgh} models a control group \textit{hierarchy} as a collection of named control groups which partition the tasks
-in the system. Operations are added for creating and deleting control groups and for moving a task between control groups.
-\item Section \ref{sec:ss} introduces the notion of a \textit{subsystem} which identifies collections of \textit{resources} using control group names. Combining a subsystem with a hierarchy is deferred to Section \ref{sec:attss}.
-\item Section \ref{sec:manyss} completes the model as a system of multiple subsystems associated with a hierarchy.
+
+\item  Section \ref{sec:cgh} models a control group \emph{hierarchy} as a collection of named control groups which partition the tasks
+in the system. Operations are defined for creating and deleting control groups and for moving a task between control groups.
+
+\item Section \ref{sec:ss} introduces the notion of a \emph{subsystem} which identifies collections of \emph{resources} using control group names.
+
+\item Section \ref{sec:attss} combines a \emph{subsystem} with a \emph{hierarchy}.
+
+\item Section \ref{sec:manyss} completes the model as a system of multiple subsystems associated with a shared hierarchy.
+
 \end{itemize}
+The further stage of modelling a system of multiple control group hierarchies is omitted since distinct hierarchies operate independently of each other.
 
-The further stage of modelling a system of multiple control group hierarchies is omitted since distinct hierarchies operate independently of each other in the kernel.
+The document concludes with section \ref{sec:kernel} which relates the model to kernel externals. 
+Control group hierarchies are created using the \texttt{mount} command and monitored and managed using the mounted filesystem. 
+The remaining control group hierarchy operations correspond to system actions, such as creating and destroying tasks.
 
-Section \ref{sec:kernel} then relates the model to kernel externals. Control group hierarchies are created using the \texttt{mount} command and monitored and managed using the mounted filesystem. The remaining control group hierarchy operations correspond to system actions, such as creating and destroying tasks.
+There is a series of appendices which offer background material:
+\begin{itemize}
+\item Appendix \ref{sec:znot} gives a one-page summary of most of the Z-notation used in this document.
+
+\item Appendix \ref{sec:sources} outlines the sources we have used to help compile the model.
+
+\item Appendix \ref{sec:notes} is a record of some experiments we performed to investigate control groups and subsystems properties.
+
+\item Appendix \ref{sec:references} contains references.
+
+\end{itemize}
 
 %=============================================================================
 \section{Fundamentals}
@@ -170,7 +192,8 @@ EmptyCGroup == (\mu CGroup | taskset = \emptyset )
 %----------------------------------------------------------------------------------------------------
 \subsection{Control group path names}
 
-Control groups have names, but these have a structure---a file directory-like structure---so we define them as \emph{sequences} of simple names (think of these as directory names), for which we use the shorthand $CGPath$:
+Control groups have names, but these have a structure---a file directory-like structure---so we define them as \emph{sequences} of simple names 
+(think of these as directory names), for which we use the shorthand $CGPath$:
 
 \begin{zed}
 CGPath == \seq SIMPLENAME
@@ -184,7 +207,8 @@ ROOTCGROUPNAME : CGPath
 ROOTCGROUPNAME = \langle \rangle
 \end{axdef}
 
-There may be many $CGroup$s in the system, and a collection of $CGroup$ with names must `fill out' the tree-structure with $CGPath$ names. We explain this with a $NamedCGroups$ collection:
+There may be many $CGroup$s in the system, and a collection of $CGroup$ with names must `fill out' the tree-structure with $CGPath$ names. 
+We explain this with a $NamedCGroups$ collection:
 
 \begin{schema}{NamedCGroups}
 cg : CGPath \ffun CGroup
@@ -217,7 +241,8 @@ which has the (pleasing) consequence that there is always at least one task in t
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Initialisation}
 
-When the system tasks are first created, then, this $INITIALTASK$ must exist, which is to say that there is at least one task. We simplify it by saying there is exactly one (though we are not usually around to see this natal state).
+When the system tasks are first created, then, this $INITIALTASK$ must exist, which is to say that there is at least one task. 
+We simplify it by saying there is exactly one (though we are not usually around to see this natal state).
 
 \begin{schema}{InitTasks}
 Tasks'
@@ -466,7 +491,8 @@ path? \neq ROOTCGROUPNAME \\
 cg' = cg \cup \{ path? \mapsto EmptyCGroup \} \\
 cgroup' = cgroup
 \end{schema}
-The control group path name is not an existing path (it's not in the old state); it cannot be the root; the new path must point to the empty control group, and the path must `fit' into the $cg$ map (see below); the task partition is unaffected.
+The control group path name is not an existing path (it's not in the old state); it cannot be the root; 
+the new path must point to the empty control group, and the path must `fit' into the $cg$ map (see below); the task partition is unaffected.
 
 What does it mean for the path to `fit'? It means that all its prefixes are in $\dom cg$ already. Equivalently, its immediate parent (the `front' of the sequence) is there.
 The constraint which says `$path?$ is not the root', is strictly redundant (it can be derived from the other constraints).
@@ -705,7 +731,8 @@ We are tempted to say that the resources transfer from one control group to the 
 In general the transfer may involve extra resources, or it may reduce the resources used. Particular
 subsystems might be able to say more about this.
 
-Again it is instructive to consider what happens if the source and destination are the same control group. The specification implies that this is a no-op: the resources used are unchanging. It remains to be seen if this is the case,
+Again it is instructive to consider what happens if the source and destination are the same control group. 
+The specification implies that this is a no-op: the resources used are unchanging. It remains to be seen if this is the case,
 but we would be surprised if it wasn't.  It is nice to see this falling out of a general description.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
@@ -981,14 +1008,14 @@ The signature of the initialisation in the model is:
 \also
   MultiSubsystems'
 \end{schema*}
-The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it names and attaches subsystems to a 
+The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it attaches named subsystems to a 
 (newly created) hierarchy.
 
 \begin{verbatim}
     mount -t cgroup <mountName> -o<subNames> <h-path>
 \end{verbatim}
 The \texttt{<mountName>} is ignored (except perhaps for messages), 
-the option (following \texttt{-o}) is a non-empty list\footnote{If the option is omitted, the list defaults to all the subsystems defined to the kernel} of subsystem names
+the option (following \texttt{-o}) is a non-empty list\footnote{If the option is omitted, the list defaults to all the subsystems defined to the kernel.} of subsystem names
 ($subNames?$), and \texttt{<h-path>} is a location in a filesystem
 where the state of the multiple subsystems and the hierarchy are surfaced as a virtual filesystem (see further API).
 
@@ -1060,6 +1087,9 @@ For example:
 will move the task with process id \texttt{1234} from whatever control group it is currently in to 
 the control group \texttt{dest/cg1}.
 
+Again, as the subsystem state changes so the
+filesystem rooted in \texttt{<h-path>} reflects these updates; in this case this might involve two control groups.
+
 Whether or not \emph{resources} move with the task is determined by subsystem settings, and is not
 prohibited nor mandated by our model operation.
 
@@ -1101,7 +1131,7 @@ A consequence of these restrictions means that the root control group can never 
 %----------------------------------------------------------------------------------------------------
 \subsection{$Add$ and $Remove$ $ResourcesInMultiSs$}
 
-The model signatures for adding and removing resources managed by a subsystem are the same:
+The model signatures for adding and removing resources managed by a single subsystem are the same:
 
 \begin{schema*}
     rs?: ResourceSet \\
@@ -1110,7 +1140,8 @@ The model signatures for adding and removing resources managed by a subsystem ar
 \also
     \Delta MultiSubsystems
 \end{schema*}
-These are the set of resources to be added or removed ($rs?$), the control group where these resource changes are to take place ($cgp?$), and the (name of the) subsystem which is managing these resources ($sn?$).
+These are the set of resources to be added or removed ($rs?$), the control group where these resource changes are to take place ($cgp?$), 
+and the (name of the) subsystem which is managing these resources ($sn?$).
 
 These operations describe only the most basic features of subsystems' resource management.
 They are limited to one subsystem's resources in one control group.
