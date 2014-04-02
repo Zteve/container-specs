@@ -26,7 +26,7 @@ Steve Powell
 
 %=============================================================================
 
-This document attempts to describe containers \cite{containers} in a precise fashion.
+This document attempts to describe \emph{container}s (see in, for example, \cite{garden}) in a precise fashion.
 
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
@@ -58,13 +58,55 @@ are''\footnote{``What \emph{are} containers?'' \emph{Jerzy Czaykowski} (adapted)
 
 This document is a rag-bag of concepts and ideas (at the moment). The intention is to find the right decomposition of ideas to simply describe the state, and state transitions, of \emph{Containers} and the \emph{Jobs} that they \emph{Run}.
 
+%=============================================================================
+\section{Containers}
+
+\begin{schema}{MultiSS}
+dummy : \nat
+\end{schema}
+
+\begin{zed}
+[FILESYSTEM, NETWORK, PID, TASK]
+\end{zed}
+
+\begin{schema}{Job}
+t: TASK\\
+\end{schema}
+
+\begin{zed}
+ContainerState ::= STARTED | STOPPED
+\end{zed}
+
+
+\begin{schema}{Container}
+fs : FILESYSTEM \\
+network : NETWORK \\
+MultiSS\\
+jobs : PID \pfun Job \\
+state : ContainerState \\
+
+\end{schema}
 
 %=============================================================================
 \section{Initial whiteboard stuff}
 
-\includegraphics[width=\textwidth]{pics/IMG_0685.jpg}
+\includegraphics[width=0.9\textwidth]{pics/IMG_0685.jpg}
 
-\includegraphics[width=\textwidth]{pics/IMG_0686.jpg}
+\includegraphics[width=0.9\textwidth]{pics/IMG_0686.jpg}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   A P P E N D I C E S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+
+\appendix
+
+%=============================================================================
+%   Z   N O T A T I O N
+%=============================================================================
+\input{../z/z-notation.tex}
 
 %=============================================================================
 %   B I B L I O G R A P H Y
