@@ -2,7 +2,7 @@
 \usepackage{../z/zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Final}{Version 1.0}
+\markboth{Final}{Version 1.0.1}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -28,6 +28,11 @@ Steve Powell
 
 This document specifies precisely some of the features of \emph{Linux control groups} and \emph{subsystems} 
 in order to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
+
+Note that this version assumes that each hierarchy must be associated with at least one subsystem.
+This assumption is incorrect and needs removing.
+
+Note to readers who are not familiar with the Z notation: you should be able to read the English, ignore the Z, and get some benefit from the document.
 
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
