@@ -1070,16 +1070,14 @@ The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it attach
 (newly created) hierarchy.
 
 \begin{verbatim}
-    mount -t cgroup <mountName> -o<subNames> <label> <h-path>
+    mount -t cgroup -o name=<name>,<subNames> <mountName> <h-path>
 \end{verbatim}
-The \texttt{<mountName>} is ignored (except perhaps for messages), 
-the option (following \texttt{-o}) is a non-empty list\footnote{If the option is omitted, the list defaults 
+The option (following \texttt{-o}) consists of an optional (although arbitrary) hierarchy name (\texttt{<name>}) followed by a non-empty list\footnote{If the option is omitted, the list defaults 
 to \emph{all} the subsystems defined to the kernel.} of subsystem names
-($subNames?$), and \texttt{<h-path>} is a location in a filesystem
+($subNames?$),
+the \texttt{<mountName>} is ignored (except perhaps for messages), 
+and \texttt{<h-path>} is a location in a filesystem
 where the state of the multiple subsystems and the hierarchy are surfaced as a virtual filesystem (see further API).
-
-It is not clear what \texttt{<label>} is used for, but it is supposed to label the hierarchy.
-It is normally set to \texttt{none} in the examples we have seen.
 
 The input $systasks?$ is the set of extant tasks (processes) in the system when the subsystems and hierarchy
 are created and is an implicit parameter to \texttt{mount}.
@@ -1097,9 +1095,9 @@ A consequence of this is that subsystems may not be detached or attached to hier
 After the first draft of this specification we discovered there was a syntax which allowed a control groups hierarchy to be created with \emph{no} subsystems attached. This was an undocumented case, which has limited (but not entirely useless) application.
 
 \begin{verbatim}
-    mount -t cgroup <mountName> -o "name=<name>,none" <label> <h-path>
+    mount -t cgroup -o name=<name>,none <mountName> <h-path>
 \end{verbatim}
-The \texttt{<name>} is arbitrary, and the special syntax \texttt{,none} attaches no subsystems to the mounted
+The special option syntax \texttt{,none} attaches no subsystems to the mounted
 control group hierarchy.
 
 Our specification covers this case when $subNames?$ is the empty set.
