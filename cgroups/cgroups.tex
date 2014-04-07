@@ -30,10 +30,12 @@ This document specifies precisely some of the features of \emph{Linux control gr
 in order to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
 
 Draft Version 1.1 introduces the possibility of zero subsystems `attached' to a hierarchy. The adjustments are
-profound.
+technically profound, but semantically benign.
 
-Readers who are not familiar with the Z notation should be able to read the English, ignore the Z, and still
-get some benefit from the document.
+Readers who are not familiar with the Z notation should feel free to \emph{ignore the mathematics} and instead
+read the English explanations. 
+The prose is intended to be complete in itself, though it may not enjoy the precision of the
+formal text.
 
 % Alt-Cmd-M -- \emph{}
 % Alt-Cmd-Z -- \zed{}
@@ -155,7 +157,7 @@ and these states begin by being empty:
 InitResources \defs [ Resources' | rs' = \emptyset ]
 \end{zed}
 
-The basic operations not very interesting: simply adding and removing elements, which we expect happens
+The basic operations are not very interesting: simply adding and removing elements, which we expect happens
 in batches (sets):
 
 \begin{schema}{AddResources}
@@ -198,7 +200,7 @@ EmptyCGroup == (\mu CGroup | taskset = \emptyset )
 %----------------------------------------------------------------------------------------------------
 \subsection{Control group path names}
 
-Control groups have names, but these have a structure---a file directory-like structure---so we define them as \emph{sequences} of simple names 
+Control groups have names, but these have a structure---a directory-like structure---so we define them as \emph{sequences} of simple names 
 (think of these as directory names), for which we use the shorthand $CGPath$:
 
 \begin{zed}
@@ -213,7 +215,7 @@ ROOTCGROUPNAME : CGPath
 ROOTCGROUPNAME = \langle \rangle
 \end{axdef}
 
-There may be many $CGroup$s in the system, and a collection of $CGroup$ with names must `fill out' the tree-structure with $CGPath$ names. 
+There may be many $CGroup$s in the system, and a collection of $CGroup$s with names must `fill out' the tree-structure with $CGPath$ names. 
 We explain this with a $NamedCGroups$ collection:
 
 \begin{schema}{NamedCGroups}
@@ -272,8 +274,8 @@ parent? \in systasks \\
 task! \notin systasks \\
 systasks' = systasks \cup \{ task! \}
 \end{schema}
-The new task has to have a (designated) parent, which is just any existing system task; the new task is not already
-in the system and is inserted into the system, without disturbing any other tasks.
+The new task has to have a (designated) parent, which must be an existing task; the new task does not already
+exist and is inserted into the system, without disturbing any other tasks.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Destroying a task---lowest level}
@@ -296,15 +298,16 @@ the task is removed from the set of system tasks, without disturbing the other t
 
 Of course we know there is a parent/child relationship between tasks which the system knows and maintains.
 We don't think we need to know about that (except at create time) so we don't model
-it\footnote{If we need this it will become clear later when we cannot express a constraint,
+it further\footnote{If we need this it will become clear later when we cannot express a constraint,
 or cannot describe a change of state correctly.}.
 
 %=============================================================================
 \section{Control group hierarchies}
 \label{sec:cgh}
 
-Although it appears not possible to have a control group hierarchy without an attached subsystem
-(see section~\ref{sec:experiments}) we find it easier to consider hierarchies in isolation 
+Although it initially appeared not possible to have a control group hierarchy without an attached subsystem
+(see section~\ref{sec:experiments}) we found out later that this was permitted.  
+Nevertheless, it is easier to consider hierarchies in isolation 
 first\footnote{This may reflect the behaviour of the re-architected \emph{cgroups} function currently being developed.}.
 
 We combine the named control groups and system tasks and say how they should be related.
@@ -330,7 +333,8 @@ the control group tasks \emph{partition} the system tasks;
 
 We note that the existence of the function $cgroup$ is guaranteed by the partition requirement
 (on $tasks \circ cg$) that accompanies it.
-The function $cgroup$ is `derived state', and these assertions impose no extra constraints upon a hierarchy.
+The function $cgroup$ is `derived state', and the assertions in which it appears impose
+no extra constraints upon a hierarchy.
 In fact, the existence of $cgroup$ is \emph{equivalent} to the partition constraint.
 
 It is legitimate to ask how a $CGHierarchy$ is initialised.
@@ -552,7 +556,7 @@ Resource sets ``named by control group path names'' are represented by the map $
 $pinned$ is derived state (completely determined by $res$) and consists of the control group path
 names which refer to non-empty resource sets\footnote{$\dom(res \nrres \{ \emptyset \})$
 is a technical jewel, meaning the domain
-of the relation which is that subset of $res$ consisting of pairs that do not relate names to the empty
+of the relation which is that subset of $res$ consisting of pairs that do \emph{not} relate names to the empty
 resource set.}.
 
 %----------------------------------------------------------------------------------------------------
@@ -672,6 +676,9 @@ sets remain fixed.
 
 $Subsystem$s are pretty an\ae{}mic because they are not yet `attached' to a hierarchy. This is what we describe next.
 
+In a full system there may be zero or more subsystems attached to a hierarchy, but considering this case first allows us
+to consider their operations in a simpler context.
+
 \begin{schema}{AttachedSubsystem}
 Subsystem \\
 CGHierarchy
@@ -684,14 +691,14 @@ the attached hierarchy.
 %----------------------------------------------------------------------------------------------------
 \subsection{Attached subsystem operations}
 The operations on $CGHierarchy$ and those on $Subsystem$ can now be lifted to $AttachedSubsystem$
-by similar lifting mechanisms we used before. The constraints (aka preconditions) imposed
-by $CGHierarchy$ and $Subsystem$ operations combine via the
-$AttachedSubsystem$ constraint, to enable us to derive many (but not all) of the preconditions of the lifted operations.
+by lifting mechanisms similar to those we used before. The pre-conditions imposed
+by $CGHierarchy$ and $Subsystem$ operations combine, \emph{via} the
+$AttachedSubsystem$ constraint, to enable us to derive many (but not all) of the pre-conditions of the lifted operations.
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \subsubsection{Initialisation}
 
-The initially attached subsystem ought to be a simple combination of initial subsystem and initial hierarchy; and it is:
+The initially attached subsystem ought to be a simple combination of initial subsystem and initial hierarchy---and it is:
 
 \begin{zed}
 InitAttachedSubsystem \defs \\
@@ -721,14 +728,17 @@ CreateTaskInCG
 \LET cgp? == cgroup' ~ task! @ IncreaseSSResources
 \end{schema}
 Here we've introduced a local shorthand $cgp?$ for $cgroup' ~ task!$, the name of the control group which contains
-the new task ($task!$); it is on this control group that the resources may increase, all other resource sets
+the new task ($task!$); the shorthand $cgp?$ is precisely the input for $IncreaseSSResources$ so 
+it is on this control group that the resources may increase, all other resource sets
 remaining fixed.
 
-This is intentionally non-deterministic because we cannot say what resources a new task might require or
+This is intentionally non-deterministic because we cannot say 
+(without detailed examination of the particular subsystem) 
+what resources a new task might require or
 what its parent might require. In general, we might add resources into the control group.
 
 Note that it is possible for the $pinned$ set to increase but only by the addition of the single control group
-named $cgp?$.
+with the name $cgp?$.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Destroy a task:}
@@ -740,9 +750,9 @@ DestroyTaskInCG
 \where
 \LET cgp? == cgroup ~ task? @ DecreaseSSResources
 \end{schema}
-Shorthand again;  the control groups resources may decrease, but all others remain the same.
+Shorthand as input again;  the control groups resources may decrease, but all others remain the same.
 
-Here the $pinned$ set might reduce by one control group, but only one.
+Here the $pinned$ set might reduce by one control group, but at most one.
 
 % .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .   .
 \subparagraph{Move a task:}
@@ -919,7 +929,7 @@ The second way is when we wish to insist that \emph{only} one subsystem is chang
 
 We augment
 $OneSubsystemChange$ to say this:
-\begin{schema}{OnlySubsystemChange}
+\begin{schema}{OnlyOneSubsystemChange}
 OneSubsystemChange[ sn? / sn ] \\
 \where
 \{ sn? \} \ndres subs = \{ sn? \} \ndres subs' \\
@@ -962,6 +972,7 @@ When a task is destroyed all attached subsystems change simultaneously. We expos
 MultiSubsystemsChange \\
 task? : TASK
 \where
+DestroyTaskInCG\\
 \forall sn : subNames @ \\
 \t1 \exists \Delta Subsystem | OneSubsystemChange @ \\
     \t2 DestroyTaskInAttachedCGH
@@ -979,6 +990,7 @@ MultiSubsystemsChange \\
 dest? : CGPath \\
 task? : TASK
 \where
+MoveCGroupTask\\
 \forall sn : subNames @ \\
 \t1 \exists \Delta Subsystem | OneSubsystemChange @ \\
     \t2 MoveTaskInAttachedCGH
@@ -994,6 +1006,7 @@ A new control group is created in each subsystem in the same way:
 MultiSubsystemsChange \\
 path? : CGPath
 \where
+CreateCGroup\\
 \forall sn : subNames @ \\
 \t1 \exists \Delta Subsystem | OneSubsystemChange @ \\
     \t2 CreateCGroupInAttachedCGH
@@ -1009,6 +1022,7 @@ A control group is removed from each subsystem:
 MultiSubsystemsChange \\
 path? : CGPath
 \where
+DestroyCGroup\\
 \forall sn : subNames @ \\
 \t1 \exists \Delta Subsystem | OneSubsystemChange @ \\
     \t2 DestroyCGroupInAttachedCGH
@@ -1025,14 +1039,14 @@ Adding and removing resources applies to \emph{only} one subsystem.
 
 \begin{zed}
 AddResourcesInMultiSs \defs  \exists \Delta Subsystem @ \\
-    \t1 AddResourcesInAttachedSubsystem \land OnlySubsystemChange
+    \t1 AddResourcesInAttachedSubsystem \land OnlyOneSubsystemChange
 \also
 RemoveResourcesInMultiSs \defs  \exists \Delta Subsystem @ \\
-    \t1 RemoveResourcesInAttachedSubsystem \land OnlySubsystemChange
+    \t1 RemoveResourcesInAttachedSubsystem \land OnlyOneSubsystemChange
 \end{zed}
 Here we use standard pointwise lifting.
 
-The subsystem name input ($sn?$) appears in $OnlySubsystemChange$
+The subsystem name input ($sn?$) appears in $OnlyOneSubsystemChange$
 and the other inputs appear in the ...$ResourcesInAttachedSubsystem$ operations.
 
 %=============================================================================
@@ -1056,12 +1070,16 @@ The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it attach
 (newly created) hierarchy.
 
 \begin{verbatim}
-    mount -t cgroup <mountName> -o<subNames> <h-path>
+    mount -t cgroup <mountName> -o<subNames> <label> <h-path>
 \end{verbatim}
 The \texttt{<mountName>} is ignored (except perhaps for messages), 
-the option (following \texttt{-o}) is a non-empty list\footnote{If the option is omitted, the list defaults to all the subsystems defined to the kernel.} of subsystem names
+the option (following \texttt{-o}) is a non-empty list\footnote{If the option is omitted, the list defaults 
+to \emph{all} the subsystems defined to the kernel.} of subsystem names
 ($subNames?$), and \texttt{<h-path>} is a location in a filesystem
 where the state of the multiple subsystems and the hierarchy are surfaced as a virtual filesystem (see further API).
+
+It is not clear what \texttt{<label>} is used for, but it is supposed to label the hierarchy.
+It is normally set to \texttt{none} in the examples we have seen.
 
 The input $systasks?$ is the set of extant tasks (processes) in the system when the subsystems and hierarchy
 are created and is an implicit parameter to \texttt{mount}.
@@ -1073,6 +1091,18 @@ and each subsystem contributes
 Notice that if any filesystem is mounted on an existing mount point (\texttt{<h-path>} above) then the first 
 \texttt{mount} is overwritten.
 A consequence of this is that subsystems may not be detached or attached to hierarchies that are already mounted.
+
+\subsubsection{An unattached hierarchy}
+
+After the first draft of this specification we discovered there was a syntax which allowed a control groups hierarchy to be created with \emph{no} subsystems attached. This was an undocumented case, which has limited (but not entirely useless) application.
+
+\begin{verbatim}
+    mount -t cgroup <mountName> -o "name=<name>,none" <label> <h-path>
+\end{verbatim}
+The \texttt{<name>} is arbitrary, and the special syntax \texttt{,none} attaches no subsystems to the mounted
+control group hierarchy.
+
+Our specification covers this case when $subNames?$ is the empty set.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{$CreateTaskInMultiSs$}
