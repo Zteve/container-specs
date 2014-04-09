@@ -2,7 +2,12 @@
 \usepackage{../z/zed-cm}
 \usepackage{graphicx}
 \usepackage[nottoc,numbib]{tocbibind}
-\markboth{Draft}{Version 1.1}
+
+\def\Version#1{\def\version{#1}}
+
+\Version{1.1}
+
+\markboth{Final}{Version \version{}}
 \pagestyle{myheadings}
 \begin{document}
 \parskip 2 pt
@@ -10,7 +15,9 @@
 
 \def\Slash{\slash\hspace{0pt}}
 
-\title{An Abstract Model of Linux Control Groups and Subsystems}
+\title{An Abstract Model of Linux Control Groups and Subsystems\\
+{\large Version \version{}}
+}
 
 \author{
 Glyn Normington\and
@@ -29,7 +36,7 @@ Steve Powell
 This document specifies precisely some of the features of \emph{Linux control groups} and \emph{subsystems} 
 in order to support robust and reliable development of \emph{Warden}, \emph{Garden} and related products.
 
-Draft Version 1.1 introduces the possibility of zero subsystems `attached' to a hierarchy. The adjustments are
+Version 1.1 introduces the possibility of \emph{zero} subsystems `attached' to a hierarchy. The adjustments are
 technically profound, but semantically benign.
 
 Readers who are not familiar with the Z notation should feel free to \emph{ignore the mathematics} and instead
@@ -1074,7 +1081,7 @@ The \texttt{mount} command creates a $MultiSubsystems$ state, that is, it attach
 \end{verbatim}
 The option (following \texttt{-o}) consists of an optional (although arbitrary) hierarchy name (\texttt{<name>}) followed by a non-empty list\footnote{If the option is omitted, the list defaults 
 to \emph{all} the subsystems defined to the kernel.} of subsystem names
-($subNames?$),
+(\texttt{<subNames>}),
 the \texttt{<mountName>} is ignored (except perhaps for messages), 
 and \texttt{<h-path>} is a location in a filesystem
 where the state of the multiple subsystems and the hierarchy are surfaced as a virtual filesystem (see further API).
