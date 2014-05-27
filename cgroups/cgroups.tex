@@ -371,8 +371,8 @@ systasks? : \finset TASK
 \where
 systasks' = systasks? \\
 \exists CGroup' @ \\
-( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
-\land taskset' = systasks' ~~)
+\t1 ( ~~~ cg' = \{ ~ ROOTCGROUPNAME \mapsto \theta CGroup' ~\} \\
+\t1 \land taskset' = systasks' ~~)
 \end{schema}
 All existing system tasks are placed in the initial $CGroup$,
 with the special root name.
@@ -840,7 +840,7 @@ where $\Xi CGHierarchy$ documents that the hierarchy remains unchanged.
 
 The aim of this section is to move away from considering just one subsystem and its affect upon
 a control group hierarchy, to the more general case where zero, one or more subsystems are attached
-to the same hierarchy.
+to the same hierarchy\footnote{We originally thought the zero case was not possible (see section~\ref{sec:mailing list}).}.
 
 We model this as a collection of $Subsystem$s, sharing a common hierarchy.
 
@@ -1323,9 +1323,10 @@ We gather here some observations, experiments and discussions which have informe
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Mailing lists discussions}
-
-It does not seem possible to define a \texttt{cgroup} hierarchy with no subsystems attached to it.
-See the mailing list discussion\cite{noop}.
+\label{sec:mailinglist}
+It did not seem possible to define a \texttt{cgroup} hierarchy with no subsystems attached to it.
+See the mailing list discussion\cite{noop}. We eventually discovered there is a special keyword that allows this!
+This caused us to change our state model for $MultiSubsystems$, and in the process simplify some of our operations.
 
 %----------------------------------------------------------------------------------------------------
 \subsection{Experiments}
