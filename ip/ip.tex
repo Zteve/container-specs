@@ -1,0 +1,236 @@
+\documentclass[a4paper,twoside,12pt]{article}
+\usepackage{../z/zed-cm}
+\usepackage{graphicx}
+\usepackage[nottoc,numbib]{tocbibind}
+\markboth{Draft}{Version 0.1}
+\pagestyle{myheadings}
+\begin{document}
+\parskip 2 pt
+\parindent 10 pt
+
+\def\Slash{\slash\hspace{0pt}}
+
+\title{Container networking}
+
+\author{
+Glyn Normington\and
+Steve Powell
+}
+
+\maketitle
+% The following three commands ensure the title page is without a page number but page numbering starts here.
+% Page numbers appear on subsequent pages, and are roman until the main body, which starts again at arabic 1.
+\thispagestyle{empty}
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+%=============================================================================
+
+This document describes the container networking spec.
+
+% Alt-Cmd-M -- \emph{}
+% Alt-Cmd-Z -- \zed{}
+% Alt-Cmd-X -- \axdef{}
+% Alt-Cmd-S -- \schema{}
+% Alt-Shift-Cmd-T -- \texttt{}
+
+% Type checking hacks
+\newcommand{\true}{true}
+\newcommand{\false}{false}
+\renewcommand{\emptyset}{\varnothing}
+%=============================================================================
+
+\clearpage
+\tableofcontents
+
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Introduction}
+
+This is a document that records the deliberations of Glyn and Steve as they come to grips with ``what networking really
+does''. It arises out of a need to control the networking of containers, including creating several containers which share a subnet, and the restriction of access of containers to the wider internet.
+
+%=============================================================================
+\section{Overview of this document}
+
+This document is a place to store our initial thoughts as we investigate what the internet (ip) stack is like. The intention is to find the right decomposition of ideas to simply describe the state, and state transitions, of the components in the stack, and the tasks that they perform.
+
+%=============================================================================
+\section{Fundamentals}
+
+\begin{zed}
+[ IpAddr, ContainerId ] 
+\also
+Subnet == \power IpAddr
+\end{zed}
+
+\section{Network states}
+
+Explain
+
+\begin{schema}{ContainerNet}
+ip : IpAddr \\
+subnet : Subnet \\
+gw: IpAddr
+\where
+ip \in subnet \\
+ip \neq gw \\
+gw \notin subnet
+\end{schema}
+
+\begin{schema}{NetworkPool}
+pool : \power IpAddr \\
+alloc, free : \power IpAddr
+\where
+free \subseteq pool \\
+alloc = pool \setminus free
+\end{schema}
+
+\section{Network pool operations}
+
+\begin{schema}{NetworkPoolChange}
+\Delta NetworkPool
+\where
+pool' = pool
+\end{schema}
+
+\begin{schema}{Allocate}
+NetworkPoolChange \\
+ip! : IpAddr
+\where
+ip! \in free \\
+free' = free \setminus \{ ip! \}
+\end{schema}
+
+\begin{schema}{AllocateTwo}
+NetworkPoolChange \\
+ip!, gw! : IpAddr
+\where
+ip! \in free \land gw! \in free \\
+ip! \neq gw! \\
+free' = free \setminus \{ ip!, gw! \}
+\end{schema}
+
+\subsection{Invariants}
+
+Each $ContainerNet$ has a relationship with the $NetworkPool$. $CNetPooled$ holds when the container $ip$ is not part of a special subnet, and is allocated from the pool.
+
+$CNetSubnet$ holds when the container $ip$ is part of a subnet potentially shared with other containers.
+
+\begin{schema}{CNetSubnet}
+ContainerNet \\
+NetworkPool
+\where
+subnet \cap pool = \emptyset \\
+gw \in alloc
+\end{schema}
+
+\begin{schema}{CNetPooled}
+ContainerNet \\
+NetworkPool
+\where
+ip \in pool \\
+subnet = \{ ip \} \\
+gw \in alloc
+\end{schema}
+
+\begin{zed}
+CNetValid \defs CNetPooled \lor CNetSubnet
+\end{zed}
+
+We also have invariants that hold between pairs of $ContainerNet$s.
+
+\begin{zed}
+CNetPair \defs ContainerNet_1 \land ContainerNet_2 \\
+CNetDistinctPair \defs [ CNetPair | ip_1 \neq ip_2 ]
+\end{zed}
+
+\begin{schema}{CNetPairShared}
+CNetDistinctPair
+\where
+subnet_1 = subnet_2 \\
+gw_1 \neq gw_2
+\end{schema}
+
+\begin{schema}{CNetPairDisjoint}
+CNetDistinctPair
+\where
+subnet_1 \cap subnet_2 = \emptyset \\
+gw_1 \neq gw_2
+\end{schema}
+
+\begin{zed}
+CNetPairValid \defs CNetPairShared \lor CNetPairDisjoint
+\end{zed}
+
+\section{More network state}
+
+\begin{schema}{Net}
+NetworkPool \\
+cnet : ContainerId \pfun ContainerNet
+\where
+\forall cn : \ran cnet; ContainerNet | cn = \theta ContainerNet \\
+	\t1 @ CNetValid \\
+\forall c_1, c_2 : \dom cnet ; CNetPair \\
+	\t1 | c_1 \neq c_2 \land cnet~c_1 = \theta ContainerNet_1 \land cnet~c_2 = \theta ContainerNet_2 \\
+	\t1 @ CNetPairValid
+\end{schema}
+
+\begin{zed}
+NetChange \defs \Delta Net \land NetworkPoolChange
+\end{zed}
+
+\section{Creating a container}
+
+\begin{schema}{CNCreateBase}
+NetChange \\
+ContainerNet
+\also
+cid! : ContainerId
+\where
+cid! \notin \dom cnet \\
+cnet' = cnet \cup \{ cid! \mapsto \theta ContainerNet \}
+\end{schema}
+
+\begin{schema}{CNCreateFromPool}
+CNCreateBase
+\where
+AllocateTwo [ ip / ip!, gw / gw! ] \\
+subnet = \{ ip \}
+\end{schema}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%   A P P E N D I C E S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+
+\appendix
+
+%=============================================================================
+%   Z   N O T A T I O N
+%=============================================================================
+\input{../z/z-notation.tex}
+
+%=============================================================================
+%   B I B L I O G R A P H Y
+%=============================================================================
+\newpage
+\begin{flushleft}
+\begin{thebibliography}{99}
+\label{sec:references}
+% `99' is a picture of the generated numeric references -- they are two digits in this bibliography
+% If we had a hundred or more we would have used 999, or whatever.
+
+%%  Example bibliography entry:
+%\bibitem{knuth76}                                                        % citation callout, e.g.: \cite{knuth76}
+%  Donald E. Knuth,                                                        % author
+%  \emph{The computer as Master Mind}.                    % title
+%  J. Recreational Mathematics, Vol.~9(1), 1976-1977. % publisher, or journal, volume and date
+
+\end{thebibliography}
+\end{flushleft}
+\end{document}
