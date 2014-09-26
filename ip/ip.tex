@@ -10,7 +10,7 @@
 
 \def\Slash{\slash\hspace{0pt}}
 
-\title{Container networking}
+\title{Container Networking}
 
 \author{
 Glyn Normington\and
@@ -50,27 +50,86 @@ This document describes the container networking spec.
 %=============================================================================
 \section{Introduction}
 
-This is a document that records the deliberations of Glyn and Steve as they come to grips with ``what networking really
+This is a document that records the authors' deliberations as they come to grips with ``what networking really
 does''. It arises out of a need to control the networking of containers, including creating several containers which share a subnet, and the restriction of access of containers to the wider internet.
 
 %=============================================================================
 \section{Overview of this document}
 
-This document is a place to store our initial thoughts as we investigate what the internet (ip) stack is like. The intention is to find the right decomposition of ideas to simply describe the state, and state transitions, of the components in the stack, and the tasks that they perform.
+This document is a place to store our initial thoughts as we investigate what the internet (IP) stack is like. The intention is to find the right decomposition of ideas to simply describe the state, and state transitions, of the components in the stack, and the tasks that they perform.
+
+The document currently focuses on container networking and does not yet model the underlying IP and link layers. Behaviour in error cases is not specified; error cases are modelled simply as false preconditions.
+
+The Z specification language is used to capture the model, but sufficient English text is also provided that readers who do not know Z should be able to understand the model. The appendix contains a summary of the Z notation.
 
 %=============================================================================
 \section{Fundamentals}
 
+Nodes of the IP network are identified by IP address. Containers are identified by a container id. A subnet is a set of IP addresses. The formats of IP addresses and the structure of subnets need not be modelled for our current purposes.
 \begin{zed}
 [ IpAddr, ContainerId ] 
 \also
 Subnet == \power IpAddr
 \end{zed}
 
-\section{Network states}
+%=============================================================================
+\newpage
+\section{Network pool}
 
-Explain
+A network pool is a managed collection of IP addresses which enables IP addresses to be allocated and freed. The pool is partitioned into allocated and free subsets.
+\begin{schema}{NetworkPool}
+pool : \power IpAddr \\
+alloc, free : \power IpAddr
+\where
+free \subseteq pool \\
+alloc = pool \setminus free
+\end{schema}
 
+%=============================================================================
+\section{Network pool operations}
+
+Operations on a network pool do not modify the pool of IP addresses.
+\begin{schema}{NetworkPoolChange}
+\Delta NetworkPool
+\where
+pool' = pool
+\end{schema}
+
+A single IP address can be allocated from the network pool.
+\begin{schema}{Allocate}
+NetworkPoolChange \\
+ip! : IpAddr
+\where
+ip! \in free \\
+free' = free \setminus \{ ip! \}
+\end{schema}
+
+An IP address and a gateway address can be allocated from the network pool.
+\begin{schema}{AllocateTwo}
+NetworkPoolChange \\
+ip!, gw! : IpAddr
+\where
+ip! \in free \land gw! \in free \\
+ip! \neq gw! \\
+free' = free \setminus \{ ip!, gw! \}
+\end{schema}
+The allocated addresses are distinct.
+\\ \\
+A set of IP addresses can be returned to the network pool. Any which did not come from the
+network pool are ignored.
+\begin{schema}{Release}
+NetworkPoolChange \\
+ips? : \power IpAddr
+\where
+alloc' = alloc \setminus ips?
+\end{schema}
+
+%=============================================================================
+\newpage
+\section{Container Network}
+
+A container network has an IP address, it belongs to a subnet, and it has a gateway address which it uses to route packets of data, known as \emph{datagrams},  to non-local IP addresses.
+The container IP address identifies the container from a networking perspective as we will see later.
 \begin{schema}{ContainerNet}
 ip : IpAddr \\
 subnet : Subnet \\
@@ -80,54 +139,13 @@ ip \in subnet \\
 ip \neq gw \\
 gw \notin subnet
 \end{schema}
-
-\begin{schema}{NetworkPool}
-pool : \power IpAddr \\
-alloc, free : \power IpAddr
-\where
-free \subseteq pool \\
-alloc = pool \setminus free
-\end{schema}
-
-\section{Network pool operations}
-
-\begin{schema}{NetworkPoolChange}
-\Delta NetworkPool
-\where
-pool' = pool
-\end{schema}
-
-\begin{schema}{Allocate}
-NetworkPoolChange \\
-ip! : IpAddr
-\where
-ip! \in free \\
-free' = free \setminus \{ ip! \}
-\end{schema}
-
-\begin{schema}{AllocateTwo}
-NetworkPoolChange \\
-ip!, gw! : IpAddr
-\where
-ip! \in free \land gw! \in free \\
-ip! \neq gw! \\
-free' = free \setminus \{ ip!, gw! \}
-\end{schema}
+The container's IP address belongs to the container's subnet. The gateway address is distinct from the container's IP address and does not belong to the container's subnet.
 
 \subsection{Invariants}
 
-Each $ContainerNet$ has a relationship with the $NetworkPool$. $CNetPooled$ holds when the container $ip$ is not part of a special subnet, and is allocated from the pool.
+Each $ContainerNet$ has a relationship with a particular $NetworkPool$. In practice, a network pool is associated with zero or more container networks.
 
-$CNetSubnet$ holds when the container $ip$ is part of a subnet potentially shared with other containers.
-
-\begin{schema}{CNetSubnet}
-ContainerNet \\
-NetworkPool
-\where
-subnet \cap pool = \emptyset \\
-gw \in alloc
-\end{schema}
-
+$CNetPooled$ holds when the container $ip$ is not part of a special subnet, and is allocated from the pool.
 \begin{schema}{CNetPooled}
 ContainerNet \\
 NetworkPool
@@ -136,55 +154,86 @@ ip \in pool \\
 subnet = \{ ip \} \\
 gw \in alloc
 \end{schema}
+The container's gateway is allocated from the pool.
 
+$CNetSubnet$ holds when the container $ip$ is part of a subnet potentially shared with other containers.
+\begin{schema}{CNetSubnet}
+ContainerNet \\
+NetworkPool
+\where
+subnet \cap pool = \emptyset \\
+gw \in alloc
+\end{schema}
+The container's gateway is allocated from the pool, but the container's IP address is not.
+
+A container network is valid with respect to a network pool if either the container $ip$ is allocated from the pool or is part of a special subnet.
 \begin{zed}
 CNetValid \defs CNetPooled \lor CNetSubnet
 \end{zed}
 
-We also have invariants that hold between pairs of $ContainerNet$s.
-
+There are also invariants between distinct pairs of $ContainerNet$s.
 \begin{zed}
 CNetPair \defs ContainerNet_1 \land ContainerNet_2 \\
 CNetDistinctPair \defs [ CNetPair | ip_1 \neq ip_2 ]
 \end{zed}
+Any distinct pair of container networks have distinct container IP addresses since the container IP address identifies the container from a networking perspective.
 
+Some distinct pairs of container networks share a special subnet.
 \begin{schema}{CNetPairShared}
 CNetDistinctPair
 \where
 subnet_1 = subnet_2 \\
 gw_1 \neq gw_2
 \end{schema}
+Such pairs of container networks have distinct gateway addresses.
 
+Other distinct pairs of container networks have disjoint subnets. It turns out that at most one of the pair has a special subnet and at least one of the pair has a container IP address allocated from the network pool.
 \begin{schema}{CNetPairDisjoint}
 CNetDistinctPair
 \where
 subnet_1 \cap subnet_2 = \emptyset \\
 gw_1 \neq gw_2
 \end{schema}
+These pairs of container networks also have distinct gateway addresses.
 
+A distinct pair of container networks is valid providing the pair shares a special subnet or they have disjoint subnets. 
 \begin{zed}
 CNetPairValid \defs CNetPairShared \lor CNetPairDisjoint
 \end{zed}
 
-\section{More network state}
+%=============================================================================
+\newpage
+\section{Network}
 
+The network, at least from the point of view of containers, has a network pool and a collection of container networks indexed by container id.
 \begin{schema}{Net}
 NetworkPool \\
 cnet : ContainerId \pfun ContainerNet
 \where
 \forall cn : \ran cnet; ContainerNet | cn = \theta ContainerNet \\
 	\t1 @ CNetValid \\
+\also
 \forall c_1, c_2 : \dom cnet ; CNetPair \\
 	\t1 | c_1 \neq c_2 \land cnet~c_1 = \theta ContainerNet_1 \land cnet~c_2 = \theta ContainerNet_2 \\
 	\t1 @ CNetPairValid
 \end{schema}
+All the container networks in the collection are valid with respect to the network pool and with respect to each other.
 
+%=============================================================================
+\section{Network operations}
+
+The following sections model operations on the network.
+\\ \\
+All operations on the network preserve the network pool of IP addresses (although IP addresses may be allocated and freed).
 \begin{zed}
 NetChange \defs \Delta Net \land NetworkPoolChange
 \end{zed}
 
-\section{Creating a container}
+\subsection{Creating a container}
 
+We now specify what it means to create a container, from a networking perspective.
+\\ \\
+The basic principle of creating a container is that a new container id is generated and associated with a container network. Notice that the new container network is valid with respect to the network pool and with respect to any previously existing container networks.
 \begin{schema}{CNCreateBase}
 NetChange \\
 ContainerNet
@@ -195,11 +244,49 @@ cid! \notin \dom cnet \\
 cnet' = cnet \cup \{ cid! \mapsto \theta ContainerNet \}
 \end{schema}
 
+There are three ways of creating a container network: the container IP address may be allocated automatically from the network pool; a specific container IP address may be allocated from the network pool; or a container network may be created for a special subnet. These variants are distinguished syntactically by the input parameters and are modelled below as three separate operations.
+
+Firstly, a container network may be created by allocating its container IP address from the network pool.
 \begin{schema}{CNCreateFromPool}
 CNCreateBase
 \where
 AllocateTwo [ ip / ip!, gw / gw! ] \\
 subnet = \{ ip \}
+\end{schema}
+The container's IP and gateway addresses are allocated from the network pool. The container's subnet consists of the container's IP address alone.
+
+Secondly, a container network may be created by allocating a container IP address specified as an input parameter from the network pool.
+\begin{schema}{CNCreateFromPoolWithSpecificIP}
+CNCreateFromPool \\
+ip? : IpAddr
+\where
+ip? = ip
+\end{schema}
+The specified IP address must be free for the operation to succeed.
+
+Thirdly, a container network may be allocated with a special subnet and a container IP address from that subnet. This variant enables multiple containers to be created which share a subnet.
+\begin{schema}{CNCreateSubnet}
+CNCreateBase \\
+subnet? : Subnet \\
+ip? : IpAddr
+\where
+ip? \in subnet? \\
+ip? = ip \\
+subnet? = subnet \\
+Allocate[ gw / ip! ]
+\end{schema}
+The gateway address is allocated from the network pool. The invariants in $Net$ imply that the specified subnet is either new or is identical to that of one or more existing containers in which case those containers have container IP addresses distinct from the specified container IP address. In other words, it is an error to specify a subnet and a container IP address that are already in use.
+
+\subsection{Destroying a container}
+Destroying a container from a network perspective simply means removing it from the collection of containers and releasing the IP addresses that were allocated for the container from the network pool.
+\begin{schema}{CNDestroy}
+NetChange \\
+cid? : ContainerId
+\where
+\exists ContainerNet | cid? \mapsto \theta ContainerNet \in cnet @ \\
+	\t1 cnet' = \{ cid? \} \ndres cnet \land \\
+	\t1 (\exists ips : \power IpAddr | ips = \{ ip, gw \} @ \\
+		\t2 Release[ ips / ips? ])
 \end{schema}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -218,10 +305,10 @@ subnet = \{ ip \}
 %=============================================================================
 %   B I B L I O G R A P H Y
 %=============================================================================
-\newpage
-\begin{flushleft}
-\begin{thebibliography}{99}
-\label{sec:references}
+%\newpage
+%\begin{flushleft}
+%\begin{thebibliography}{99}
+%\label{sec:references}
 % `99' is a picture of the generated numeric references -- they are two digits in this bibliography
 % If we had a hundred or more we would have used 999, or whatever.
 
@@ -231,6 +318,6 @@ subnet = \{ ip \}
 %  \emph{The computer as Master Mind}.                    % title
 %  J. Recreational Mathematics, Vol.~9(1), 1976-1977. % publisher, or journal, volume and date
 
-\end{thebibliography}
-\end{flushleft}
+%\end{thebibliography}
+%\end{flushleft}
 \end{document}
