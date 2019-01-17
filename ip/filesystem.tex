@@ -1,0 +1,105 @@
+\documentclass[a4paper,twoside,12pt]{article}
+\usepackage{../z/zed-cm}
+\usepackage{graphicx}
+\usepackage[nottoc,numbib]{tocbibind}
+\markboth{Draft}{Version 0.1}
+\pagestyle{myheadings}
+\begin{document}
+\parskip 2 pt
+\parindent 10 pt
+
+\def\Slash{\slash\hspace{0pt}}
+
+\title{XXX}
+
+\author{
+ AN Other
+}
+
+\maketitle
+% The following three commands ensure the title page is without a page number but page numbering starts here.
+% Page numbers appear on subsequent pages, and are roman until the main body, which starts again at arabic 1.
+\thispagestyle{empty}
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+%=============================================================================
+
+
+% Alt-Cmd-M -- \emph{}
+% Alt-Cmd-Z -- \zed{}
+% Alt-Cmd-X -- \axdef{}
+% Alt-Cmd-S -- \schema{}
+% Alt-Shift-Cmd-T -- \texttt{}
+
+% Type checking hacks
+\newcommand{\true}{true}
+\newcommand{\false}{false}
+\renewcommand{\emptyset}{\varnothing}
+%=============================================================================
+
+\clearpage
+\tableofcontents
+
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+%=============================================================================
+\section{Introduction}
+
+A file system has named files so we introduce file name and file content types.
+\begin{zed}
+[Name, File] 
+\end{zed}
+
+\begin{zed}
+ Path == \seq Name
+\end{zed}
+
+\begin{schema}{FS}
+ fs : Path \pfun File
+\end{schema}
+
+\begin{schema}{CreateFile}
+ \Delta FS \\
+ p? : Path \\
+ f? : File \\
+\where
+ p? \notin \dom fs \\
+ fs' = fs \cup \{ p? \mapsto f? \}
+\end{schema}
+
+\begin{schema}{DeleteFile}
+ \Delta FS \\
+ p? : Path \\
+\where
+ p? \in \dom fs \\
+ fs' = \{ p? \} \ndres fs
+\end{schema}
+
+\clearpage
+%=============================================================================
+%   Z   N O T A T I O N
+%=============================================================================
+\input{../z/z-notation.tex}
+
+%=============================================================================
+%   B I B L I O G R A P H Y
+%=============================================================================
+%\newpage
+%\begin{flushleft}
+%\begin{thebibliography}{99}
+%\label{sec:references}
+% `99' is a picture of the generated numeric references -- they are two digits in this bibliography
+% If we had a hundred or more we would have used 999, or whatever.
+
+%%  Example bibliography entry:
+%\bibitem{knuth76}                                                        % citation callout, e.g.: \cite{knuth76}
+%  Donald E. Knuth,                                                        % author
+%  \emph{The computer as Master Mind}.                    % title
+%  J. Recreational Mathematics, Vol.~9(1), 1976-1977. % publisher, or journal, volume and date
+
+%\end{thebibliography}
+%\end{flushleft}
+\end{document}
